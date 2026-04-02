@@ -1,0 +1,161 @@
+.ed-page { min-height: 100vh; background: #0d0d0d; }
+.ed-loading { min-height: 80vh; display: flex; align-items: center; justify-content: center; background: #0d0d0d; }
+.loader { width: 40px; height: 40px; border: 2px solid rgba(255,255,255,0.06); border-top-color: #ff3d00; border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Hero */
+.ed-hero { position: relative; height: 55vh; min-height: 400px; overflow: hidden; }
+.ed-hero-img { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.45) saturate(0.8); }
+.ed-hero-fade {
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(13,13,13,0.3) 0%, transparent 30%, transparent 50%, rgba(13,13,13,1) 100%);
+}
+.ed-hero-top {
+  position: absolute; top: 5.5rem; left: 0; right: 0; z-index: 2;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.ed-back, .ed-share {
+  display: flex; align-items: center; gap: 0.4rem; padding: 0.5rem 1rem;
+  background: rgba(0,0,0,0.4); backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.7);
+  font-size: 0.75rem; cursor: pointer; transition: all 0.2s ease;
+  font-family: var(--font-body); text-transform: uppercase; letter-spacing: 0.08em;
+}
+.ed-back:hover, .ed-share:hover { background: rgba(255,255,255,0.1); color: #fff; }
+
+.ed-hero-bottom { position: absolute; bottom: 0; left: 0; right: 0; z-index: 2; padding-bottom: 2rem; }
+.ed-hero-tags { display: flex; gap: 0.4rem; margin-bottom: 1rem; flex-wrap: wrap; }
+.ed-tag {
+  padding: 0.3rem 0.8rem; background: rgba(255,255,255,0.1); backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.15); color: rgba(255,255,255,0.8);
+  font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.12em; font-weight: 600;
+}
+.ed-tag--genre { background: #ff3d00; border-color: #ff3d00; color: #fff; }
+.ed-tag--hot { background: rgba(255,61,0,0.2); border-color: rgba(255,61,0,0.4); color: #ff3d00; }
+.ed-title { font-size: clamp(2.5rem, 6vw, 4rem); font-weight: 900; color: #fff; letter-spacing: 0.06em; line-height: 1; }
+
+/* Layout */
+.ed-layout { display: grid; grid-template-columns: 1fr 380px; gap: 3rem; padding: 2.5rem 0 4rem; }
+
+/* Info grid */
+.ed-info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2px; margin-bottom: 2px; }
+.ed-info-card {
+  display: flex; align-items: flex-start; gap: 1rem; padding: 1.25rem;
+  background: #141414; transition: background 0.2s ease;
+}
+.ed-info-card:hover { background: #1a1a1a; }
+.ed-info-icon { color: #ff3d00; font-size: 1.1rem; margin-top: 0.15rem; flex-shrink: 0; }
+.ed-info-card strong { display: block; color: #fff; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.15rem; }
+.ed-info-card span { font-size: 0.75rem; color: rgba(255,255,255,0.4); }
+
+/* Capacity */
+.ed-capacity { padding: 1rem 1.25rem; background: #141414; margin-bottom: 2rem; }
+.ed-capacity-bar { height: 4px; background: rgba(255,255,255,0.06); overflow: hidden; margin-bottom: 0.5rem; }
+.ed-capacity-fill { height: 100%; transition: width 0.6s ease; }
+.ed-capacity-text { font-size: 0.7rem; color: rgba(255,255,255,0.4); }
+
+/* Sections */
+.ed-section { margin-bottom: 2.5rem; }
+.ed-section-title {
+  font-size: 0.9rem; font-weight: 700; color: #fff; letter-spacing: 0.08em;
+  margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem;
+}
+.ed-description { color: rgba(255,255,255,0.55); font-size: 0.95rem; line-height: 1.9; }
+
+/* Lineup */
+.ed-lineup { display: flex; flex-direction: column; gap: 1px; background: rgba(255,255,255,0.04); }
+.ed-artist {
+  display: flex; align-items: center; gap: 1.25rem; padding: 1rem 1.25rem;
+  background: #141414; transition: background 0.2s ease;
+}
+.ed-artist:hover { background: #1a1a1a; }
+.ed-artist-num { font-family: 'Courier New', monospace; font-size: 0.7rem; color: rgba(255,255,255,0.2); }
+.ed-artist-name { font-size: 0.9rem; color: #fff; font-weight: 600; letter-spacing: 0.03em; }
+
+/* Related */
+.ed-related { display: flex; flex-direction: column; gap: 1px; background: rgba(255,255,255,0.04); }
+.ed-related-card {
+  display: flex; align-items: center; gap: 1rem; padding: 0.75rem 1rem;
+  background: #141414; text-decoration: none; color: inherit; transition: background 0.2s ease;
+}
+.ed-related-card:hover { background: #1a1a1a; }
+.ed-related-card img { width: 60px; height: 44px; object-fit: cover; }
+.ed-related-info { flex: 1; }
+.ed-related-info h4 { font-size: 0.85rem; color: #fff; font-weight: 600; margin-bottom: 0.1rem; text-transform: none; letter-spacing: 0.02em; }
+.ed-related-info span { font-size: 0.7rem; color: rgba(255,255,255,0.35); }
+.ed-related-price { font-size: 0.9rem; font-weight: 700; color: #fff; white-space: nowrap; }
+
+/* Sidebar */
+.ed-sidebar { position: sticky; top: 5rem; }
+.ed-ticket-box { background: #141414; border: 1px solid rgba(255,255,255,0.08); padding: 2rem; }
+
+.ed-org-badge {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 0.75rem 1rem; background: rgba(255,61,0,0.06); border: 1px solid rgba(255,61,0,0.15);
+  margin-bottom: 1.5rem; font-size: 0.75rem;
+}
+.ed-org-badge span { color: rgba(255,255,255,0.6); }
+.ed-org-badge a { color: #ff3d00; font-weight: 600; font-size: 0.7rem; text-decoration: none; }
+
+.ed-price-row { margin-bottom: 1.5rem; }
+.ed-price { font-size: 3rem; font-weight: 900; color: #fff; line-height: 1; }
+.ed-price-label { font-size: 0.75rem; color: rgba(255,255,255,0.35); margin-top: 0.25rem; display: block; }
+
+.ed-ticket-meta {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: rgba(255,255,255,0.06);
+  margin-bottom: 1.5rem;
+}
+.ed-ticket-meta-item {
+  padding: 0.75rem; background: #141414; text-align: center;
+}
+.ed-ticket-meta-item span { display: block; font-size: 0.6rem; color: rgba(255,255,255,0.35); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.25rem; }
+.ed-ticket-meta-item strong { font-size: 1.1rem; color: #fff; }
+
+.ed-purchased {
+  text-align: center; padding: 1.5rem; background: rgba(76,175,80,0.06);
+  border: 1px solid rgba(76,175,80,0.2); margin-bottom: 1rem;
+}
+.ed-purchased svg { color: #4caf50; margin-bottom: 0.5rem; }
+.ed-purchased strong { display: block; color: #4caf50; font-size: 1rem; margin-bottom: 0.25rem; }
+.ed-purchased p { color: rgba(255,255,255,0.5); font-size: 0.8rem; margin-bottom: 1rem; }
+
+.ed-login-hint { text-align: center; margin-top: 1rem; font-size: 0.8rem; color: rgba(255,255,255,0.35); }
+.ed-login-hint a { color: #ff3d00; font-weight: 600; }
+
+.ed-ticket-details { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.06); }
+.ed-ticket-detail {
+  display: flex; justify-content: space-between; padding: 0.5rem 0;
+  font-size: 0.75rem; color: rgba(255,255,255,0.4);
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.ed-ticket-detail:last-child { border-bottom: none; }
+.ed-ticket-detail span:last-child { color: rgba(255,255,255,0.6); }
+
+@media (max-width: 768px) {
+  .ed-hero { height: 45vh; min-height: 320px; }
+  .ed-layout { grid-template-columns: 1fr; gap: 2rem; }
+  .ed-sidebar { position: static; order: -1; }
+  .ed-info-grid { grid-template-columns: 1fr; }
+  .ed-title { font-size: clamp(2rem, 8vw, 3rem); }
+  .ed-hero-top { top: 4.5rem; }
+}
+
+
+/* Organizer card */
+.ed-organizer-card {
+  display: flex; align-items: center; gap: 1.25rem; padding: 1.25rem;
+  background: #141414; border: 1px solid rgba(255,255,255,0.06);
+  text-decoration: none; color: inherit; transition: all 0.2s ease;
+}
+.ed-organizer-card:hover { background: #1a1a1a; border-color: rgba(255,255,255,0.12); }
+.ed-org-logo {
+  width: 56px; height: 56px; overflow: hidden; background: #1a1a1a;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.ed-org-logo img { width: 100%; height: 100%; object-fit: cover; }
+.ed-org-logo span { font-size: 1.5rem; font-weight: 900; color: rgba(255,255,255,0.2); }
+.ed-org-info { flex: 1; }
+.ed-org-info h3 { font-size: 0.95rem; color: #fff; font-weight: 700; letter-spacing: 0.03em; margin-bottom: 0.2rem; text-transform: none; }
+.ed-org-info span { display: flex; align-items: center; gap: 0.3rem; font-size: 0.75rem; color: rgba(255,255,255,0.4); }
+.ed-org-arrow { color: rgba(255,255,255,0.2); font-size: 1rem; }
+.ed-organizer-card:hover .ed-org-arrow { color: #ff3d00; }

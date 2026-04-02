@@ -1,0 +1,467 @@
+<html><head><meta charset="UTF-8"><style>
+body{font-family:Calibri,sans-serif;margin:2cm;font-size:11pt;color:#222}
+h1{font-size:18pt;color:#1a1a1a;border-bottom:2px solid #ff3d00;padding-bottom:8px;margin-top:30px}
+h2{font-size:14pt;color:#333;margin-top:24px}
+h3{font-size:12pt;color:#444;margin-top:18px}
+table{border-collapse:collapse;width:100%;margin:12px 0}
+th,td{border:1px solid #ccc;padding:8px 10px;text-align:left;vertical-align:top;font-size:10pt}
+th{background:#1a1a1a;color:#fff;font-weight:bold}
+tr:nth-child(even){background:#f9f9f9}
+code{background:#f0f0f0;padding:2px 6px;font-family:Consolas,monospace;font-size:9pt}
+pre{background:#f5f5f5;padding:15px;font-family:Consolas,monospace;font-size:9pt;overflow-x:auto;border:1px solid #ddd}
+.accent{color:#ff3d00;font-weight:bold}
+</style></head><body>
+<h1>RAVE — Manual Técnico</h1>
+<p><strong>Plataforma de Gestión de Eventos de Música Electrónica</strong><br>Proyecto de Tesis — 2026</p>
+
+<h1>1. Requerimientos Funcionales</h1>
+<table>
+<tr><th>ID</th><th>Requerimiento</th><th>Descripción</th></tr>
+<tr><td>RF01</td><td>Registro de usuarios</td><td>El sistema permite registrar usuarios con nombre, correo, contraseña y selección de rol (Raver u Organizador)</td></tr>
+<tr><td>RF02</td><td>Autenticación</td><td>El sistema permite iniciar y cerrar sesión con correo y contraseña</td></tr>
+<tr><td>RF03</td><td>Redirección por rol</td><td>Al iniciar sesión, el sistema redirige al Raver a /events y al Organizador a /organizer/dashboard</td></tr>
+<tr><td>RF04</td><td>Explorar eventos</td><td>Los usuarios pueden ver una lista de eventos con búsqueda por texto y filtro por género musical</td></tr>
+<tr><td>RF05</td><td>Detalle de evento</td><td>El sistema muestra información completa: fecha, hora, duración, ubicación, capacidad, precio, line-up, organizador y eventos similares</td></tr>
+<tr><td>RF06</td><td>Compra de tickets</td><td>Los Ravers pueden comprar tickets digitales que generan un código QR único</td></tr>
+<tr><td>RF07</td><td>Prevención de duplicados</td><td>El sistema impide que un usuario compre más de un ticket para el mismo evento</td></tr>
+</table>
+<table>
+<tr><th>ID</th><th>Requerimiento</th><th>Descripción</th></tr>
+<tr><td>RF08</td><td>Gestión de tickets</td><td>Los Ravers pueden ver sus tickets comprados, filtrar por estado (válido/usado) y ver el detalle con QR</td></tr>
+<tr><td>RF09</td><td>Creación de eventos</td><td>Los Organizadores pueden crear eventos mediante un formulario por pasos con validaciones (nombre, género, descripción, fecha futura, ubicación, precio, capacidad, edad mínima, duración, imagen)</td></tr>
+<tr><td>RF10</td><td>Dashboard del organizador</td><td>El sistema muestra estadísticas: eventos creados, tickets vendidos, ingresos totales, eventos próximos</td></tr>
+<tr><td>RF11</td><td>Analytics por evento</td><td>El Organizador puede ver métricas por evento: tickets vendidos, ingresos, check-ins, pendientes, porcentaje de capacidad</td></tr>
+<tr><td>RF12</td><td>Scanner QR</td><td>El Organizador puede validar tickets en la puerta del evento mediante ingreso manual del código QR, marcando el ticket como "usado"</td></tr>
+<tr><td>RF13</td><td>Perfil de marca</td><td>Los Organizadores pueden crear un perfil público con logo, portada, bio, ciudad, redes sociales y año de fundación</td></tr>
+<tr><td>RF14</td><td>Perfil público</td><td>Los usuarios pueden ver el perfil público de un organizador con sus eventos próximos y pasados</td></tr>
+<tr><td>RF15</td><td>Calendario</td><td>El sistema muestra un calendario mensual con eventos. Los usuarios pueden filtrar entre "Todos" y "Mis tickets/eventos"</td></tr>
+<tr><td>RF16</td><td>Próximamente</td><td>El sistema muestra eventos futuros con countdown en tiempo real</td></tr>
+<tr><td>RF17</td><td>Suscripciones</td><td>Los usuarios pueden suscribirse a eventos próximos para recibir notificaciones</td></tr>
+<tr><td>RF18</td><td>Notificaciones</td><td>El sistema genera notificaciones al comprar tickets y al suscribirse. Se muestran en un dropdown con badge de no leídas</td></tr>
+<tr><td>RF19</td><td>Compartir evento</td><td>Los usuarios pueden copiar el enlace de un evento al portapapeles</td></tr>
+<tr><td>RF20</td><td>Perfil de usuario</td><td>Cada usuario puede ver su perfil con estadísticas, acciones rápidas y últimos tickets/eventos según su rol</td></tr>
+</table>
+
+<h1>2. Requerimientos No Funcionales</h1>
+<h2>Rendimiento</h2>
+<table>
+<tr><th>ID</th><th>Requerimiento</th><th>Descripción</th></tr>
+<tr><td>RNF01</td><td>Tiempo de carga</td><td>La aplicación carga en menos de 3 segundos gracias a Vite como bundler</td></tr>
+<tr><td>RNF02</td><td>Carga lazy</td><td>Los componentes 3D del hero se cargan de forma lazy (React.lazy + Suspense)</td></tr>
+<tr><td>RNF03</td><td>Imágenes optimizadas</td><td>Las imágenes usan loading="lazy" para carga diferida</td></tr>
+</table>
+
+<h2>Usabilidad</h2>
+<table>
+<tr><th>ID</th><th>Requerimiento</th><th>Descripción</th></tr>
+<tr><td>RNF04</td><td>Responsive design</td><td>La interfaz es completamente responsive (mobile, tablet, desktop) con breakpoints en 480px, 768px y 1024px</td></tr>
+<tr><td>RNF05</td><td>Navegación por rol</td><td>La navegación cambia según el rol del usuario (menú diferente para Raver y Organizador)</td></tr>
+<tr><td>RNF06</td><td>Idioma</td><td>Toda la interfaz está en español</td></tr>
+<tr><td>RNF07</td><td>Feedback visual</td><td>Feedback visual inmediato en todas las acciones (toasts, estados de carga, confirmaciones)</td></tr>
+</table>
+
+<h2>Disponibilidad</h2>
+<table>
+<tr><th>ID</th><th>Requerimiento</th><th>Descripción</th></tr>
+<tr><td>RNF08</td><td>Funcionamiento offline</td><td>La aplicación funciona sin conexión a internet usando localStorage como base de datos local</td></tr>
+<tr><td>RNF09</td><td>Persistencia</td><td>Los datos persisten entre sesiones del navegador</td></tr>
+</table>
+
+<h2>Seguridad</h2>
+<table>
+<tr><th>ID</th><th>Requerimiento</th><th>Descripción</th></tr>
+<tr><td>RNF10</td><td>Rutas protegidas</td><td>Las rutas protegidas verifican autenticación y rol antes de renderizar</td></tr>
+<tr><td>RNF11</td><td>Restricción de compra</td><td>Los Organizadores no pueden comprar tickets de sus propios eventos</td></tr>
+<tr><td>RNF12</td><td>Contraseñas</td><td>Las contraseñas requieren mínimo 6 caracteres</td></tr>
+</table>
+
+<h2>Mantenibilidad</h2>
+<table>
+<tr><th>ID</th><th>Requerimiento</th><th>Descripción</th></tr>
+<tr><td>RNF13</td><td>Componentes reutilizables</td><td>Arquitectura basada en componentes reutilizables (Button, Card, Input)</td></tr>
+<tr><td>RNF14</td><td>Separación de responsabilidades</td><td>Separación clara: páginas, componentes, contexto, base de datos</td></tr>
+<tr><td>RNF15</td><td>CSS modular</td><td>CSS modular por componente con variables CSS globales</td></tr>
+</table>
+
+<h2>Portabilidad</h2>
+<table>
+<tr><th>ID</th><th>Requerimiento</th><th>Descripción</th></tr>
+<tr><td>RNF16</td><td>Compatibilidad</td><td>Funciona en cualquier navegador moderno (Chrome, Firefox, Safari, Edge)</td></tr>
+<tr><td>RNF17</td><td>Multiplataforma</td><td>Compatible con dispositivos móviles y desktop</td></tr>
+</table>
+
+<h1>3. Modelo Relacional de la Base de Datos</h1>
+<table>
+<tr><th>Tabla</th><th>Campo</th><th>Tipo</th><th>Restricción</th></tr>
+<tr><td rowspan="9"><strong>USERS</strong></td><td>id</td><td>VARCHAR(20)</td><td>PRIMARY KEY</td></tr>
+<tr><td>email</td><td>VARCHAR(255)</td><td>UNIQUE, NOT NULL</td></tr>
+<tr><td>password</td><td>VARCHAR(255)</td><td>NOT NULL</td></tr>
+<tr><td>displayName</td><td>VARCHAR(100)</td><td>NOT NULL</td></tr>
+<tr><td>role</td><td>ENUM('user','organizer')</td><td>DEFAULT 'user'</td></tr>
+<tr><td>createdAt</td><td>DATETIME</td><td>DEFAULT NOW()</td></tr>
+<tr><td>brand_name, brand_bio, brand_logo, brand_cover</td><td>VARCHAR/TEXT</td><td>NULLABLE (solo organizadores)</td></tr>
+<tr><td>brand_city, brand_instagram, brand_website</td><td>VARCHAR</td><td>NULLABLE</td></tr>
+<tr><td>brand_founded</td><td>VARCHAR(4)</td><td>NULLABLE</td></tr>
+<tr><td rowspan="14"><strong>EVENTS</strong></td><td>id</td><td>VARCHAR(20)</td><td>PRIMARY KEY</td></tr>
+<tr><td>title</td><td>VARCHAR(60)</td><td>NOT NULL</td></tr>
+<tr><td>description</td><td>TEXT</td><td>NULLABLE</td></tr>
+<tr><td>date</td><td>DATE</td><td>NOT NULL, >= HOY</td></tr>
+<tr><td>time</td><td>TIME</td><td>NOT NULL</td></tr>
+<tr><td>duration</td><td>INT</td><td>DEFAULT 6 (horas)</td></tr>
+<tr><td>location</td><td>VARCHAR(200)</td><td>NOT NULL</td></tr>
+<tr><td>address, city</td><td>VARCHAR</td><td>NULLABLE</td></tr>
+<tr><td>price</td><td>DECIMAL(10,2)</td><td>DEFAULT 0</td></tr>
+<tr><td>capacity</td><td>INT</td><td>DEFAULT 500, MIN 10</td></tr>
+<tr><td>genre</td><td>VARCHAR(50)</td><td>NULLABLE</td></tr>
+<tr><td>imageUrl</td><td>VARCHAR(500)</td><td>NULLABLE</td></tr>
+<tr><td>organizerId</td><td>VARCHAR(20)</td><td>FOREIGN KEY → USERS(id)</td></tr>
+<tr><td>ticketsSold</td><td>INT</td><td>DEFAULT 0</td></tr>
+<tr><td rowspan="7"><strong>TICKETS</strong></td><td>id</td><td>VARCHAR(20)</td><td>PRIMARY KEY</td></tr>
+<tr><td>eventId</td><td>VARCHAR(20)</td><td>FOREIGN KEY → EVENTS(id)</td></tr>
+<tr><td>userId</td><td>VARCHAR(20)</td><td>FOREIGN KEY → USERS(id)</td></tr>
+<tr><td>purchaseDate</td><td>DATETIME</td><td>DEFAULT NOW()</td></tr>
+<tr><td>status</td><td>ENUM('valid','used')</td><td>DEFAULT 'valid'</td></tr>
+<tr><td>qrCode</td><td>VARCHAR(50)</td><td>UNIQUE, NOT NULL</td></tr>
+<tr><td>usedAt</td><td>DATETIME</td><td>NULLABLE</td></tr>
+<tr><td rowspan="8"><strong>NOTIFICATIONS</strong></td><td>id</td><td>VARCHAR(20)</td><td>PRIMARY KEY</td></tr>
+<tr><td>userId</td><td>VARCHAR(20)</td><td>FOREIGN KEY → USERS(id)</td></tr>
+<tr><td>type</td><td>VARCHAR(50)</td><td>'purchase' | 'subscription'</td></tr>
+<tr><td>title</td><td>VARCHAR(200)</td><td>NOT NULL</td></tr>
+<tr><td>message</td><td>TEXT</td><td>NULLABLE</td></tr>
+<tr><td>eventId</td><td>VARCHAR(20)</td><td>NULLABLE</td></tr>
+<tr><td>read</td><td>BOOLEAN</td><td>DEFAULT FALSE</td></tr>
+<tr><td>createdAt</td><td>DATETIME</td><td>DEFAULT NOW()</td></tr>
+<tr><td rowspan="4"><strong>SUBSCRIPTIONS</strong></td><td>id</td><td>VARCHAR(20)</td><td>PRIMARY KEY</td></tr>
+<tr><td>userId</td><td>VARCHAR(20)</td><td>FOREIGN KEY → USERS(id)</td></tr>
+<tr><td>eventId</td><td>VARCHAR(20)</td><td>NOT NULL</td></tr>
+<tr><td>createdAt</td><td>DATETIME</td><td>DEFAULT NOW()</td></tr>
+</table>
+
+<h2>Relaciones</h2>
+<table>
+<tr><th>Relación</th><th>Tipo</th><th>Descripción</th></tr>
+<tr><td>USERS → EVENTS</td><td>1:N</td><td>Un organizador crea muchos eventos</td></tr>
+<tr><td>USERS → TICKETS</td><td>1:N</td><td>Un raver compra muchos tickets</td></tr>
+<tr><td>EVENTS → TICKETS</td><td>1:N</td><td>Un evento tiene muchos tickets</td></tr>
+<tr><td>USERS → NOTIFICATIONS</td><td>1:N</td><td>Un usuario tiene muchas notificaciones</td></tr>
+<tr><td>USERS ↔ EVENTS</td><td>N:M</td><td>Muchos usuarios se suscriben a muchos eventos (a través de SUBSCRIPTIONS)</td></tr>
+</table>
+
+<h1>4. Script de Generación de la Base de Datos</h1>
+<pre>
+-- RAVE Platform - Script SQL (equivalente conceptual)
+-- La aplicación usa localStorage como base de datos NoSQL
+
+CREATE TABLE users (
+  id VARCHAR(20) PRIMARY KEY,
+  email VARCHAR(255) UNIQUE NOT NULL,
+  password VARCHAR(255) NOT NULL,
+  displayName VARCHAR(100) NOT NULL,
+  role ENUM('user', 'organizer') DEFAULT 'user',
+  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  brand_name VARCHAR(100),
+  brand_bio TEXT,
+  brand_logo VARCHAR(500),
+  brand_cover VARCHAR(500),
+  brand_city VARCHAR(100),
+  brand_instagram VARCHAR(100),
+  brand_website VARCHAR(200),
+  brand_founded VARCHAR(4)
+);
+
+CREATE TABLE events (
+  id VARCHAR(20) PRIMARY KEY,
+  title VARCHAR(60) NOT NULL,
+  description TEXT,
+  date DATE NOT NULL,
+  time TIME NOT NULL,
+  duration INT DEFAULT 6,
+  location VARCHAR(200) NOT NULL,
+  address VARCHAR(200),
+  city VARCHAR(100),
+  price DECIMAL(10,2) DEFAULT 0,
+  capacity INT DEFAULT 500 CHECK(capacity >= 10),
+  genre VARCHAR(50),
+  imageUrl VARCHAR(500),
+  imagePos INT DEFAULT 50,
+  minAge INT DEFAULT 18,
+  organizerId VARCHAR(20) NOT NULL,
+  status VARCHAR(20) DEFAULT 'active',
+  ticketsSold INT DEFAULT 0,
+  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (organizerId) REFERENCES users(id)
+);
+
+CREATE TABLE tickets (
+  id VARCHAR(20) PRIMARY KEY,
+  eventId VARCHAR(20) NOT NULL,
+  userId VARCHAR(20) NOT NULL,
+  purchaseDate DATETIME DEFAULT CURRENT_TIMESTAMP,
+  status ENUM('valid', 'used') DEFAULT 'valid',
+  qrCode VARCHAR(50) UNIQUE NOT NULL,
+  usedAt DATETIME,
+  FOREIGN KEY (eventId) REFERENCES events(id),
+  FOREIGN KEY (userId) REFERENCES users(id),
+  UNIQUE(eventId, userId)
+);
+
+CREATE TABLE notifications (
+  id VARCHAR(20) PRIMARY KEY,
+  userId VARCHAR(20) NOT NULL,
+  type VARCHAR(50),
+  title VARCHAR(200) NOT NULL,
+  message TEXT,
+  eventId VARCHAR(20),
+  image VARCHAR(500),
+  isRead BOOLEAN DEFAULT FALSE,
+  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (userId) REFERENCES users(id)
+);
+
+CREATE TABLE subscriptions (
+  id VARCHAR(20) PRIMARY KEY,
+  userId VARCHAR(20) NOT NULL,
+  eventId VARCHAR(20) NOT NULL,
+  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (userId) REFERENCES users(id),
+  UNIQUE(userId, eventId)
+);
+
+-- Datos iniciales
+INSERT INTO users (id, email, displayName, role, brand_name, brand_bio, brand_city)
+VALUES ('demo-org', 'demo@rave.com', 'NOCTURN Collective', 'organizer',
+  'NOCTURN Collective', 'Colectivo de música electrónica underground', 'Bogotá');
+</pre>
+
+<h1>5. Definición de Actores y Roles</h1>
+<table>
+<tr><th>Actor</th><th>Rol en sistema</th><th>Descripción</th><th>Permisos</th></tr>
+<tr><td><strong>Visitante</strong></td><td>Sin autenticación</td><td>Usuario no registrado que navega la plataforma</td><td>Ver landing page, ver eventos públicos, registrarse, iniciar sesión</td></tr>
+<tr><td><strong>Raver</strong></td><td>role = 'user'</td><td>Usuario registrado que asiste a eventos de música electrónica</td><td>Explorar eventos, comprar tickets, ver QR, gestionar tickets, ver calendario, suscribirse a próximos, ver perfil de organizadores, recibir notificaciones</td></tr>
+<tr><td><strong>Organizador</strong></td><td>role = 'organizer'</td><td>Usuario registrado que crea y gestiona eventos</td><td>Todo lo del Raver + crear eventos, ver dashboard con analytics, scanner QR para validar entradas, editar perfil de marca, gestionar sus eventos</td></tr>
+</table>
+
+<h1>6. Casos de Uso</h1>
+<h2>a. Casos de Uso de Alto Nivel</h2>
+<table>
+<tr><th>ID</th><th>Caso de Uso</th><th>Actor</th><th>Descripción</th></tr>
+<tr><td>CU01</td><td>Registrarse</td><td>Visitante</td><td>Crear cuenta seleccionando rol Raver u Organizador</td></tr>
+<tr><td>CU02</td><td>Iniciar sesión</td><td>Visitante</td><td>Autenticarse con correo y contraseña</td></tr>
+<tr><td>CU03</td><td>Ver eventos</td><td>Todos</td><td>Explorar lista de eventos con filtros</td></tr>
+<tr><td>CU04</td><td>Comprar ticket</td><td>Raver</td><td>Adquirir entrada digital con QR</td></tr>
+<tr><td>CU05</td><td>Ver mis tickets</td><td>Raver</td><td>Gestionar tickets comprados</td></tr>
+<tr><td>CU06</td><td>Ver QR del ticket</td><td>Raver</td><td>Mostrar código QR para entrada</td></tr>
+<tr><td>CU07</td><td>Ver calendario</td><td>Todos</td><td>Vista mensual de eventos</td></tr>
+<tr><td>CU08</td><td>Suscribirse a evento</td><td>Raver</td><td>Recibir notificación cuando esté disponible</td></tr>
+<tr><td>CU09</td><td>Ver notificaciones</td><td>Raver/Org</td><td>Revisar alertas de compras y suscripciones</td></tr>
+<tr><td>CU10</td><td>Ver perfil organizador</td><td>Todos</td><td>Ver marca, bio, eventos del organizador</td></tr>
+<tr><td>CU11</td><td>Crear evento</td><td>Organizador</td><td>Publicar evento con formulario por pasos</td></tr>
+<tr><td>CU12</td><td>Ver dashboard</td><td>Organizador</td><td>Ver estadísticas generales</td></tr>
+<tr><td>CU13</td><td>Ver analytics</td><td>Organizador</td><td>Métricas detalladas por evento</td></tr>
+<tr><td>CU14</td><td>Escanear QR</td><td>Organizador</td><td>Validar tickets en puerta</td></tr>
+<tr><td>CU15</td><td>Editar perfil marca</td><td>Organizador</td><td>Personalizar logo, bio, redes</td></tr>
+<tr><td>CU16</td><td>Gestionar eventos</td><td>Organizador</td><td>Ver, filtrar y administrar eventos creados</td></tr>
+</table>
+
+<h2>b. Casos de Uso Extendidos</h2>
+<h3>CU04: Comprar Ticket</h3>
+<table>
+<tr><th>Campo</th><th>Descripción</th></tr>
+<tr><td>Nombre</td><td>Comprar Ticket</td></tr>
+<tr><td>Actor</td><td>Raver</td></tr>
+<tr><td>Precondición</td><td>El usuario está autenticado con rol 'user' y está en la página de detalle de un evento</td></tr>
+<tr><td>Flujo principal</td><td>1. El Raver ve el detalle del evento con precio y disponibilidad.<br>2. Hace clic en "Comprar Ticket".<br>3. El sistema verifica que no tenga ya un ticket para ese evento.<br>4. Crea un ticket con código QR único (formato RAVE-XXXXXXXX).<br>5. Incrementa el contador de tickets vendidos.<br>6. Genera una notificación de compra.<br>7. Muestra confirmación "¡Ticket comprado!" con enlace a Mis Tickets.</td></tr>
+<tr><td>Flujo alternativo 1</td><td>Si no está autenticado → redirige a /login</td></tr>
+<tr><td>Flujo alternativo 2</td><td>Si ya tiene ticket → muestra "Ya tienes ticket" con enlace a Mis Tickets</td></tr>
+<tr><td>Flujo alternativo 3</td><td>Si el evento está agotado → botón "Agotado" deshabilitado</td></tr>
+<tr><td>Flujo alternativo 4</td><td>Si es el organizador del evento → botón deshabilitado "No puedes comprar tu propio evento"</td></tr>
+<tr><td>Postcondición</td><td>Se crea registro en Tickets con status='valid' y qrCode único</td></tr>
+</table>
+
+<h3>CU11: Crear Evento</h3>
+<table>
+<tr><th>Campo</th><th>Descripción</th></tr>
+<tr><td>Nombre</td><td>Crear Evento</td></tr>
+<tr><td>Actor</td><td>Organizador</td></tr>
+<tr><td>Precondición</td><td>El usuario está autenticado con rol 'organizer'</td></tr>
+<tr><td>Flujo principal</td><td>1. Accede a "Crear Evento".<br>2. <strong>Paso 1:</strong> Ingresa nombre (máx 60 chars), selecciona género de 8 opciones, escribe descripción (mín 20 chars), opcionalmente agrega line-up.<br>3. <strong>Paso 2:</strong> Selecciona fecha (mínimo hoy), hora inicio, duración (3h/6h/10h/12h/24h/48h o personalizada), venue, ciudad.<br>4. <strong>Paso 3:</strong> Define precio, capacidad (10-50,000), edad mínima (16/18/21).<br>5. <strong>Paso 4:</strong> Sube imagen o selecciona de galería, ajusta posición vertical.<br>6. Hace clic en "Publicar Evento".<br>7. El sistema crea el evento y redirige al Dashboard.</td></tr>
+<tr><td>Flujo alternativo</td><td>Si la validación falla en cualquier paso → muestra errores en rojo, no permite avanzar</td></tr>
+<tr><td>Postcondición</td><td>Se crea registro en Events con status='active' y ticketsSold=0</td></tr>
+</table>
+
+<h3>CU14: Escanear QR</h3>
+<table>
+<tr><th>Campo</th><th>Descripción</th></tr>
+<tr><td>Nombre</td><td>Validar Entrada con QR</td></tr>
+<tr><td>Actor</td><td>Organizador</td></tr>
+<tr><td>Precondición</td><td>El Organizador tiene al menos un evento creado</td></tr>
+<tr><td>Flujo principal</td><td>1. Accede al Scanner desde Dashboard o Mis Eventos.<br>2. Ve nombre del evento y stats en vivo (check-ins / total).<br>3. Selecciona modo Cámara o Manual.<br>4. Ingresa el código QR del ticket.<br>5. El sistema busca el ticket por qrCode y eventId.<br>6. Si válido → muestra "¡Acceso Concedido!" en verde, marca ticket como 'used'.<br>7. Contador de check-ins se actualiza.</td></tr>
+<tr><td>Flujo alternativo 1</td><td>Si código no existe → "Ticket inválido" en rojo</td></tr>
+<tr><td>Flujo alternativo 2</td><td>Si ticket ya usado → "Ticket ya utilizado" en rojo</td></tr>
+<tr><td>Postcondición</td><td>Ticket cambia status='valid' → status='used', se registra usedAt</td></tr>
+</table>
+
+<h1>7. Diagrama de Clases</h1>
+<table>
+<tr><th>Clase</th><th>Atributos</th><th>Métodos</th></tr>
+<tr><td><strong>AuthContext</strong></td><td>currentUser: User<br>userProfile: User<br>loading: boolean</td><td>register(email, password, name, role)<br>login(email, password)<br>logout()<br>updateProfile(data)</td></tr>
+<tr><td><strong>User</strong></td><td>id: string<br>email: string<br>password: string<br>displayName: string<br>role: 'user' | 'organizer'<br>createdAt: string<br>brand: Brand (opcional)</td><td>createUser(data)<br>loginUser(email, pass)<br>getUser(id)<br>updateUser(id, data)</td></tr>
+<tr><td><strong>Brand</strong> (embebido en User)</td><td>name: string<br>bio: string<br>logo: string<br>cover: string<br>city: string<br>instagram: string<br>website: string<br>founded: string</td><td>(gestionado a través de updateUser)</td></tr>
+<tr><td><strong>Event</strong></td><td>id: string<br>title: string<br>description: string<br>date: string<br>time: string<br>duration: number<br>location: string<br>city: string<br>price: number<br>capacity: number<br>genre: string<br>imageUrl: string<br>organizerId: string<br>lineup: string[]<br>ticketsSold: number</td><td>createEvent(data)<br>getEvents()<br>getEvent(id)<br>getEventsByOrganizer(orgId)<br>updateEvent(id, data)<br>deleteEvent(id)</td></tr>
+<tr><td><strong>Ticket</strong></td><td>id: string<br>eventId: string<br>userId: string<br>purchaseDate: string<br>status: 'valid' | 'used'<br>qrCode: string<br>usedAt: string</td><td>createTicket(data)<br>getTicket(id)<br>getTicketsByUser(userId)<br>getTicketsByEvent(eventId)<br>validateTicket(qrCode, eventId)</td></tr>
+<tr><td><strong>Notification</strong></td><td>id: string<br>userId: string<br>type: string<br>title: string<br>message: string<br>read: boolean<br>createdAt: string</td><td>addNotification(userId, data)<br>getNotifications(userId)<br>markNotificationRead(id)<br>markAllRead(userId)<br>getUnreadCount(userId)</td></tr>
+<tr><td><strong>Subscription</strong></td><td>id: string<br>userId: string<br>eventId: string<br>createdAt: string</td><td>subscribe(userId, eventId)<br>isSubscribed(userId, eventId)<br>getUserSubscriptions(userId)</td></tr>
+</table>
+
+<h1>8. Diagrama de Estados por Clase</h1>
+<h2>Ticket</h2>
+<table>
+<tr><th>Estado</th><th>Transición</th><th>Estado siguiente</th><th>Acción</th></tr>
+<tr><td>(inicio)</td><td>Raver compra ticket</td><td>VALID</td><td>Se genera qrCode único, purchaseDate = now()</td></tr>
+<tr><td>VALID</td><td>Organizador escanea QR</td><td>USED</td><td>status = 'used', usedAt = now()</td></tr>
+</table>
+
+<h2>Event</h2>
+<table>
+<tr><th>Estado</th><th>Transición</th><th>Estado siguiente</th><th>Condición</th></tr>
+<tr><td>(inicio)</td><td>Organizador publica</td><td>ACTIVE</td><td>Formulario válido, fecha >= hoy</td></tr>
+<tr><td>ACTIVE</td><td>Capacidad llena</td><td>SOLD OUT</td><td>ticketsSold >= capacity</td></tr>
+<tr><td>ACTIVE</td><td>Fecha del evento pasa</td><td>PAST</td><td>date < hoy</td></tr>
+<tr><td>SOLD OUT</td><td>Fecha del evento pasa</td><td>PAST</td><td>date < hoy</td></tr>
+</table>
+
+<h2>Notification</h2>
+<table>
+<tr><th>Estado</th><th>Transición</th><th>Estado siguiente</th><th>Acción</th></tr>
+<tr><td>(inicio)</td><td>Sistema genera notificación</td><td>UNREAD</td><td>read = false</td></tr>
+<tr><td>UNREAD</td><td>Usuario abre dropdown</td><td>READ</td><td>read = true (markAllRead)</td></tr>
+</table>
+
+<h2>User (Organizador)</h2>
+<table>
+<tr><th>Estado</th><th>Transición</th><th>Estado siguiente</th><th>Condición</th></tr>
+<tr><td>(inicio)</td><td>Se registra</td><td>BÁSICO</td><td>Tiene email, nombre, rol</td></tr>
+<tr><td>BÁSICO</td><td>Edita perfil de marca</td><td>COMPLETO</td><td>Tiene brand.name, bio, logo</td></tr>
+</table>
+
+<h1>9. Diagrama de Colaboración por Proceso</h1>
+<h2>Proceso: Compra de Ticket</h2>
+<table>
+<tr><th>#</th><th>Origen</th><th>Destino</th><th>Mensaje</th></tr>
+<tr><td>1</td><td>Raver</td><td>EventDetail</td><td>click "Comprar Ticket"</td></tr>
+<tr><td>2</td><td>EventDetail</td><td>db.js</td><td>getTicketsByUser(userId) — verifica duplicados</td></tr>
+<tr><td>3</td><td>EventDetail</td><td>db.js</td><td>createTicket({eventId, userId})</td></tr>
+<tr><td>4</td><td>db.js</td><td>localStorage</td><td>Genera qrCode, guarda ticket, incrementa ticketsSold</td></tr>
+<tr><td>5</td><td>EventDetail</td><td>db.js</td><td>addNotification(userId, {type:'purchase', ...})</td></tr>
+<tr><td>6</td><td>EventDetail</td><td>Raver</td><td>Muestra "¡Ticket comprado!" + link a Mis Tickets</td></tr>
+<tr><td>7</td><td>Navbar</td><td>db.js</td><td>getUnreadCount(userId) — actualiza badge</td></tr>
+</table>
+
+<h2>Proceso: Validación de Entrada</h2>
+<table>
+<tr><th>#</th><th>Origen</th><th>Destino</th><th>Mensaje</th></tr>
+<tr><td>1</td><td>Organizador</td><td>QRScanner</td><td>Ingresa código QR</td></tr>
+<tr><td>2</td><td>QRScanner</td><td>db.js</td><td>validateTicket(qrCode, eventId)</td></tr>
+<tr><td>3</td><td>db.js</td><td>localStorage</td><td>Busca ticket por qrCode + eventId</td></tr>
+<tr><td>4</td><td>db.js</td><td>localStorage</td><td>Si válido: status='used', usedAt=now()</td></tr>
+<tr><td>5</td><td>db.js</td><td>QRScanner</td><td>Retorna {success: true/false, message}</td></tr>
+<tr><td>6</td><td>QRScanner</td><td>Organizador</td><td>Muestra overlay verde/rojo por 3 segundos</td></tr>
+<tr><td>7</td><td>QRScanner</td><td>db.js</td><td>refreshStats() — actualiza contadores</td></tr>
+</table>
+
+<h2>Proceso: Creación de Evento</h2>
+<table>
+<tr><th>#</th><th>Origen</th><th>Destino</th><th>Mensaje</th></tr>
+<tr><td>1</td><td>Organizador</td><td>CreateEvent</td><td>Llena formulario paso a paso</td></tr>
+<tr><td>2</td><td>CreateEvent</td><td>CreateEvent</td><td>validateStep(step) — valida campos del paso actual</td></tr>
+<tr><td>3</td><td>Organizador</td><td>CreateEvent</td><td>click "Publicar Evento"</td></tr>
+<tr><td>4</td><td>CreateEvent</td><td>db.js</td><td>createEvent({...formData, organizerId})</td></tr>
+<tr><td>5</td><td>db.js</td><td>localStorage</td><td>Genera ID, guarda evento con ticketsSold=0</td></tr>
+<tr><td>6</td><td>CreateEvent</td><td>Dashboard</td><td>navigate('/organizer/dashboard')</td></tr>
+</table>
+
+<h1>10. Diagrama de Secuencia por Proceso</h1>
+<h2>Proceso: Registro y Primer Uso (Organizador)</h2>
+<table>
+<tr><th>Paso</th><th>Actor/Componente</th><th>Acción</th></tr>
+<tr><td>1</td><td>Usuario → Register</td><td>Llena formulario: nombre, email, contraseña, rol=organizer</td></tr>
+<tr><td>2</td><td>Register → AuthContext</td><td>Llama register(email, password, name, 'organizer')</td></tr>
+<tr><td>3</td><td>AuthContext → db.js</td><td>Llama createUser({email, password, displayName, role})</td></tr>
+<tr><td>4</td><td>db.js → localStorage</td><td>Verifica email único, genera ID, guarda usuario</td></tr>
+<tr><td>5</td><td>db.js → AuthContext</td><td>Retorna objeto user</td></tr>
+<tr><td>6</td><td>AuthContext</td><td>setCurrentUser(user), localStorage.setItem('rave_currentUser', user.id)</td></tr>
+<tr><td>7</td><td>Register → Router</td><td>navigate('/organizer/dashboard')</td></tr>
+<tr><td>8</td><td>Dashboard</td><td>Detecta 0 eventos → muestra onboarding con 3 pasos</td></tr>
+<tr><td>9</td><td>Usuario → Dashboard</td><td>Click "Crear mi primer evento"</td></tr>
+<tr><td>10</td><td>Router → CreateEvent</td><td>Muestra formulario por pasos</td></tr>
+</table>
+
+<h2>Proceso: Compra de Ticket (Raver)</h2>
+<table>
+<tr><th>Paso</th><th>Actor/Componente</th><th>Acción</th></tr>
+<tr><td>1</td><td>Raver → Events</td><td>Busca evento por texto o filtra por género</td></tr>
+<tr><td>2</td><td>Events → db.js</td><td>getEvents() → retorna lista ordenada por fecha</td></tr>
+<tr><td>3</td><td>Raver → EventDetail</td><td>Click en card de evento</td></tr>
+<tr><td>4</td><td>EventDetail → db.js</td><td>getEvent(id), getTicketsByEvent(id), getTicketsByUser(userId)</td></tr>
+<tr><td>5</td><td>EventDetail</td><td>Verifica si ya tiene ticket (alreadyOwned)</td></tr>
+<tr><td>6</td><td>Raver → EventDetail</td><td>Click "Comprar Ticket"</td></tr>
+<tr><td>7</td><td>EventDetail → db.js</td><td>createTicket({eventId, userId})</td></tr>
+<tr><td>8</td><td>db.js</td><td>Genera qrCode='RAVE-{timestamp}-{random}', guarda ticket</td></tr>
+<tr><td>9</td><td>EventDetail → db.js</td><td>addNotification(userId, {type:'purchase', title, message})</td></tr>
+<tr><td>10</td><td>EventDetail → Raver</td><td>Muestra "¡Ticket comprado!" con link</td></tr>
+<tr><td>11</td><td>Raver → MyTickets</td><td>Click "Ver mis tickets"</td></tr>
+<tr><td>12</td><td>Raver → TicketDetail</td><td>Click en ticket → ve QR code</td></tr>
+</table>
+
+<h1>11. Diagrama de Componentes</h1>
+<table>
+<tr><th>Capa</th><th>Componente</th><th>Responsabilidad</th><th>Dependencias</th></tr>
+<tr><td rowspan="3"><strong>UI Components</strong></td><td>Button</td><td>Botón reutilizable con variantes (primary, ghost, outline, danger) y tamaños</td><td>Button.css</td></tr>
+<tr><td>Card</td><td>Contenedor con variantes (default, glass, solid)</td><td>Card.css</td></tr>
+<tr><td>Input</td><td>Campo de formulario con label, icono, error state</td><td>Input.css</td></tr>
+<tr><td rowspan="3"><strong>Layout</strong></td><td>Navbar</td><td>Navegación fija con menú por rol, notificaciones, auth</td><td>AuthContext, db.js</td></tr>
+<tr><td>Footer</td><td>Pie de página con links y redes sociales</td><td>—</td></tr>
+<tr><td>HeroScene</td><td>Escena 3D con Three.js (partículas, waveforms, audio bars)</td><td>three, @react-three/fiber</td></tr>
+<tr><td rowspan="2"><strong>Auth</strong></td><td>AuthContext</td><td>Estado global de autenticación (currentUser, userProfile)</td><td>db.js</td></tr>
+<tr><td>ProtectedRoute</td><td>HOC que verifica autenticación y rol</td><td>AuthContext</td></tr>
+<tr><td><strong>Data</strong></td><td>db.js</td><td>Capa de datos con localStorage (CRUD para users, events, tickets, notifications, subscriptions)</td><td>localStorage API</td></tr>
+<tr><td rowspan="7"><strong>Pages (Público)</strong></td><td>Home</td><td>Landing page con hero 3D, secciones informativas</td><td>HeroScene, AuthContext</td></tr>
+<tr><td>Events</td><td>Lista de eventos con búsqueda y filtros</td><td>db.js</td></tr>
+<tr><td>EventDetail</td><td>Detalle completo con compra de ticket</td><td>db.js, AuthContext</td></tr>
+<tr><td>Calendar</td><td>Vista mensual con toggle todos/mis tickets</td><td>db.js, AuthContext</td></tr>
+<tr><td>ComingSoon</td><td>Eventos próximos con countdown y suscripción</td><td>db.js, AuthContext</td></tr>
+<tr><td>OrganizerProfile</td><td>Perfil público de marca del organizador</td><td>db.js</td></tr>
+<tr><td>NotFound</td><td>Página 404</td><td>—</td></tr>
+<tr><td rowspan="4"><strong>Pages (Raver)</strong></td><td>MyTickets</td><td>Lista de tickets con filtros y estados</td><td>db.js, AuthContext</td></tr>
+<tr><td>TicketDetail</td><td>Ticket con QR, info del evento, organizador</td><td>db.js, qrcode.react</td></tr>
+<tr><td>Profile</td><td>Perfil del usuario con stats por rol</td><td>db.js, AuthContext</td></tr>
+<tr><td>Login / Register</td><td>Autenticación con selección de rol</td><td>AuthContext</td></tr>
+<tr><td rowspan="6"><strong>Pages (Organizador)</strong></td><td>Dashboard</td><td>Panel con stats, evento destacado, acciones rápidas</td><td>db.js, AuthContext</td></tr>
+<tr><td>CreateEvent</td><td>Formulario por pasos con preview en tiempo real</td><td>db.js, AuthContext</td></tr>
+<tr><td>MyEvents</td><td>Grid de eventos con filtros y métricas</td><td>db.js, AuthContext</td></tr>
+<tr><td>EventAnalytics</td><td>Métricas detalladas por evento</td><td>db.js</td></tr>
+<tr><td>QRScanner</td><td>Validación de tickets con cámara o manual</td><td>db.js</td></tr>
+<tr><td>EditBrand</td><td>Editor de perfil de marca con preview</td><td>AuthContext</td></tr>
+</table>
+
+<h1>12. Diagrama de Distribución</h1>
+<table>
+<tr><th>Nodo</th><th>Componentes desplegados</th><th>Tecnología</th></tr>
+<tr><td><strong>Navegador del Usuario</strong><br>(Cliente)</td><td>• React Application (SPA)<br>• Componentes UI (Button, Card, Input)<br>• Páginas (Home, Events, Dashboard, etc.)<br>• Three.js Scene (Hero 3D)<br>• AuthContext (estado global)<br>• db.js (capa de datos)<br>• localStorage (base de datos)</td><td>React 18<br>Vite 5<br>React Router 6<br>Three.js<br>@react-three/fiber<br>qrcode.react<br>react-icons</td></tr>
+<tr><td><strong>Servidor de Desarrollo</strong><br>(Dev)</td><td>• Vite Dev Server<br>• Hot Module Replacement<br>• Compilación JSX → JS</td><td>Vite 5<br>@vitejs/plugin-react<br>Node.js</td></tr>
+<tr><td><strong>CDN / Hosting</strong><br>(Producción)</td><td>• Archivos estáticos (HTML, CSS, JS)<br>• Assets (imágenes, fuentes)</td><td>Cualquier hosting estático:<br>Vercel, Netlify, GitHub Pages</td></tr>
+<tr><td><strong>APIs Externas</strong></td><td>• Google Fonts (tipografía Inter)<br>• Unsplash (imágenes de eventos)</td><td>HTTPS</td></tr>
+</table>
+
+<h2>Arquitectura de Despliegue</h2>
+<table>
+<tr><th>Capa</th><th>Descripción</th></tr>
+<tr><td><strong>Presentación</strong></td><td>React SPA con componentes reutilizables, CSS modular, animaciones 3D</td></tr>
+<tr><td><strong>Lógica de Negocio</strong></td><td>AuthContext (autenticación), ProtectedRoute (autorización), validaciones en formularios</td></tr>
+<tr><td><strong>Acceso a Datos</strong></td><td>db.js — capa de abstracción sobre localStorage con funciones CRUD</td></tr>
+<tr><td><strong>Almacenamiento</strong></td><td>localStorage del navegador — persistencia local sin servidor</td></tr>
+</table>
+
+<p><em>Nota: La arquitectura está diseñada para ser migrada fácilmente a Firebase, Supabase u otro backend. Solo se necesita reemplazar las funciones de db.js por llamadas a la API correspondiente, sin modificar los componentes de la interfaz.</em></p>
+
+</body></html>

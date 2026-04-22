@@ -3,10 +3,12 @@ import { useParams, Link } from 'react-router-dom'
 import { validateTicket, getEvent, getTicketsByEvent } from '../../lib/db'
 import { FiCheckCircle, FiXCircle, FiCamera, FiType, FiUsers, FiArrowLeft } from 'react-icons/fi'
 import Button from '../../components/ui/Button'
+import { useToast } from '../../components/ui/Toast'
 import './QRScanner.css'
 
 const QRScanner = () => {
   const { eventId } = useParams()
+  const toast = useToast()
   const [mode, setMode] = useState('camera') // 'camera' or 'manual'
   const [manualCode, setManualCode] = useState('')
   const [result, setResult] = useState(null)

@@ -4,6 +4,7 @@ import { getEvents } from '../lib/db'
 import { useAuth } from '../context/AuthContext'
 import { FiMapPin, FiSearch, FiArrowRight, FiEye } from 'react-icons/fi'
 import Button from '../components/ui/Button'
+import { EventCardSkeleton } from '../components/ui/Skeleton'
 import './Events.css'
 
 const Events = () => {
@@ -31,7 +32,17 @@ const Events = () => {
   const genres = ['all', 'techno', 'house', 'trance', 'hardstyle']
 
   if (loading) return (
-    <div className="loading-container"><div className="loader"></div><p>Cargando eventos...</p></div>
+    <div className="events-page">
+      <div className="events-hero"><div className="events-hero-bg"></div>
+        <div className="container events-hero-content">
+          <span className="events-hero-tag">Descubre la escena</span>
+          <h1 className="events-hero-title">Eventos</h1>
+        </div>
+      </div>
+      <div className="container" style={{ paddingTop: '2rem' }}>
+        <div className="events-grid">{[1,2,3,4,5,6].map(i => <EventCardSkeleton key={i} />)}</div>
+      </div>
+    </div>
   )
 
   return (

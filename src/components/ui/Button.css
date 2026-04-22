@@ -86,3 +86,7 @@
   align-items: center;
   font-size: 1.1em;
 }
+
+
+.btn-danger-ghost { color: rgba(255,255,255,0.4) !important; border-color: rgba(255,255,255,0.1) !important; }
+.btn-danger-ghost:hover { color: #ff3d00 !important; border-color: #ff3d00 !important; background: rgba(255,61,0,0.08) !important; }

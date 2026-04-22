@@ -70,6 +70,17 @@ export const updateEvent = (id, data) => {
 
 export const deleteEvent = (id) => {
   setStore('events', getStore('events').filter(e => e.id !== id))
+  // Also delete related tickets
+  setStore('tickets', getStore('tickets').filter(t => t.eventId !== id))
+}
+
+// ── Get attendees for an event ──
+export const getEventAttendees = (eventId) => {
+  const tickets = getTicketsByEvent(eventId)
+  return tickets.map(t => {
+    const user = getUser(t.userId)
+    return { ...t, user }
+  })
 }
 
 // ── Tickets ──

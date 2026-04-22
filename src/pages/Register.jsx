@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { FiMail, FiLock, FiUser } from 'react-icons/fi'
 import Input from '../components/ui/Input'
 import Button from '../components/ui/Button'
+import { useToast } from '../components/ui/Toast'
 import './Auth.css'
 
 const Register = () => {
@@ -18,6 +19,7 @@ const Register = () => {
   const [loading, setLoading] = useState(false)
   const { register, currentUser, userProfile } = useAuth()
   const navigate = useNavigate()
+  const toast = useToast()
 
   if (currentUser) return <Navigate to={userProfile?.role === 'organizer' ? '/organizer/dashboard' : '/events'} replace />
 
@@ -43,6 +45,7 @@ const Register = () => {
 
     try {
       const user = await register(formData.email, formData.password, formData.displayName, formData.role)
+      toast.success('¡Cuenta creada exitosamente!')
       navigate(formData.role === 'organizer' ? '/organizer/dashboard' : '/events')
     } catch (error) {
       setError('Error al crear la cuenta. El correo puede estar en uso.')

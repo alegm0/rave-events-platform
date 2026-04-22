@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom'
 import { useEffect } from 'react'
 import { AuthProvider } from './context/AuthContext'
+import { ToastProvider } from './components/ui/Toast'
 import Navbar from './components/layout/Navbar'
 import Footer from './components/layout/Footer'
 import Home from './pages/Home'
@@ -32,6 +33,7 @@ function ScrollToTop() {
 function App() {
   return (
     <AuthProvider>
+      <ToastProvider>
       <Router>
         <ScrollToTop />
         <div className="app">
@@ -102,6 +104,7 @@ function App() {
           <Footer />
         </div>
       </Router>
+      </ToastProvider>
     </AuthProvider>
   )
 }

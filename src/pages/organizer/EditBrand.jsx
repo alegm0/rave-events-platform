@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { FiCheck, FiImage, FiInstagram, FiGlobe, FiMapPin } from 'react-icons/fi'
 import Button from '../../components/ui/Button'
+import { useToast } from '../../components/ui/Toast'
 import '../organizer/Dashboard.css'
 import './EditBrand.css'
 
@@ -25,6 +26,7 @@ const LOGO_OPTIONS = [
 const EditBrand = () => {
   const { userProfile, updateProfile, currentUser } = useAuth()
   const navigate = useNavigate()
+  const toast = useToast()
   const brand = userProfile?.brand || {}
 
   const [form, setForm] = useState({
@@ -56,6 +58,7 @@ const EditBrand = () => {
       }
     })
     navigate(`/organizer/${currentUser.id}`)
+    toast.success('Perfil de marca actualizado')
   }
 
   const handleFileUpload = (e, field) => {

@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { FiMail, FiLock } from 'react-icons/fi'
 import Input from '../components/ui/Input'
 import Button from '../components/ui/Button'
+import { useToast } from '../components/ui/Toast'
 import './Auth.css'
 
 const Login = () => {
@@ -15,6 +16,7 @@ const Login = () => {
   const [loading, setLoading] = useState(false)
   const { login, currentUser, userProfile } = useAuth()
   const navigate = useNavigate()
+  const toast = useToast()
 
   if (currentUser) return <Navigate to={userProfile?.role === 'organizer' ? '/organizer/dashboard' : '/events'} replace />
 
@@ -32,6 +34,7 @@ const Login = () => {
 
     try {
       const user = await login(formData.email, formData.password)
+      toast.success('¡Bienvenido de vuelta!')
       navigate(user.role === 'organizer' ? '/organizer/dashboard' : '/events')
     } catch (error) {
       setError('Correo o contraseña incorrectos. Intenta de nuevo.')

@@ -4,15 +4,19 @@ import { getEvent, getEvents, createTicket, getTicketsByEvent, getUser, getTicke
 import { useAuth } from '../context/AuthContext'
 import { FiCalendar, FiMapPin, FiClock, FiUsers, FiArrowLeft, FiShare2, FiCheck, FiMusic, FiArrowRight } from 'react-icons/fi'
 import Button from '../components/ui/Button'
+import Modal from '../components/ui/Modal'
+import { useToast } from '../components/ui/Toast'
 import './EventDetail.css'
 
 const EventDetail = () => {
   const { id } = useParams()
   const navigate = useNavigate()
   const { currentUser, userProfile } = useAuth()
+  const toast = useToast()
   const [event, setEvent] = useState(null)
   const [purchasing, setPurchasing] = useState(false)
   const [purchased, setPurchased] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
   const [tickets, setTickets] = useState([])
   const [alreadyOwned, setAlreadyOwned] = useState(false)
   const [relatedEvents, setRelatedEvents] = useState([])
@@ -38,6 +42,11 @@ const EventDetail = () => {
 
   const handlePurchase = () => {
     if (!currentUser) { navigate('/login'); return }
+    setShowConfirm(true)
+  }
+
+  const confirmPurchase = () => {
+    setShowConfirm(false)
     setPurchasing(true)
     try {
       createTicket({ eventId: id, userId: currentUser.id })
@@ -49,7 +58,8 @@ const EventDetail = () => {
         image: event.imageUrl,
       })
       setPurchased(true)
-    } catch (e) { console.error(e) }
+      toast.success('¡Ticket comprado exitosamente!')
+    } catch (e) { toast.error('Error al comprar el ticket'); console.error(e) }
     finally { setPurchasing(false) }
   }
 
@@ -265,6 +275,23 @@ const EventDetail = () => {
           </div>
         </div>
       </div>
+
+      {/* Purchase confirmation modal */}
+      <Modal isOpen={showConfirm} onClose={() => setShowConfirm(false)} title="Confirmar compra" size="sm">
+        <div style={{ textAlign: 'center' }}>
+          <p style={{ color: 'rgba(255,255,255,0.6)', marginBottom: '1rem', fontSize: '0.9rem' }}>
+            ¿Confirmas la compra de tu ticket para <strong style={{ color: '#fff' }}>{event?.title}</strong>?
+          </p>
+          <div style={{ background: 'rgba(255,255,255,0.04)', padding: '1rem', marginBottom: '1.5rem' }}>
+            <div style={{ fontSize: '2rem', fontWeight: 800, color: '#fff' }}>{event?.price === 0 ? 'Gratis' : `$${event?.price}`}</div>
+            <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)' }}>Entrada General · QR Digital</div>
+          </div>
+          <div style={{ display: 'flex', gap: '0.75rem' }}>
+            <Button variant="ghost" fullWidth onClick={() => setShowConfirm(false)}>Cancelar</Button>
+            <Button fullWidth onClick={confirmPurchase}>Confirmar Compra</Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

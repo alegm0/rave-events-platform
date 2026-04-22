@@ -4,6 +4,7 @@ import { createEvent } from '../../lib/db'
 import { useAuth } from '../../context/AuthContext'
 import { FiArrowRight, FiArrowLeft, FiCheck, FiMapPin, FiCalendar, FiClock, FiUsers, FiDollarSign, FiImage, FiMusic } from 'react-icons/fi'
 import Button from '../../components/ui/Button'
+import { useToast } from '../../components/ui/Toast'
 import './CreateEvent.css'
 
 const GENRES = [
@@ -33,6 +34,7 @@ const today = new Date().toISOString().split('T')[0]
 const CreateEvent = () => {
   const { currentUser } = useAuth()
   const navigate = useNavigate()
+  const toast = useToast()
   const [step, setStep] = useState(1)
   const [errors, setErrors] = useState({})
   const [form, setForm] = useState({
@@ -101,6 +103,7 @@ const CreateEvent = () => {
       ticketsSold: 0,
     })
     navigate('/organizer/dashboard')
+    toast.success('¡Evento publicado exitosamente!')
   }
 
   return (

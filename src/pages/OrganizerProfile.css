@@ -95,3 +95,12 @@
   .op-past-grid { grid-template-columns: repeat(2, 1fr); }
   .op-name { font-size: 1.4rem; }
 }
+
+
+.op-edit-btn {
+  display: inline-flex; align-items: center; gap: 0.4rem; margin-top: 1rem;
+  padding: 0.5rem 1rem; border: 1px solid rgba(255,255,255,0.15);
+  color: rgba(255,255,255,0.6); font-size: 0.7rem; text-transform: uppercase;
+  letter-spacing: 0.1em; font-weight: 600; text-decoration: none; transition: all 0.2s ease;
+}
+.op-edit-btn:hover { color: #ff3d00; border-color: #ff3d00; }

@@ -159,3 +159,9 @@
 .ed-org-info span { display: flex; align-items: center; gap: 0.3rem; font-size: 0.75rem; color: rgba(255,255,255,0.4); }
 .ed-org-arrow { color: rgba(255,255,255,0.2); font-size: 1rem; }
 .ed-organizer-card:hover .ed-org-arrow { color: #ff3d00; }
+
+
+.ed-artist-time {
+  font-family: 'Courier New', monospace; font-size: 0.8rem; color: #ff3d00;
+  font-weight: 700; min-width: 50px;
+}

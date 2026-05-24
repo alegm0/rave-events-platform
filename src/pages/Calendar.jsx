@@ -23,10 +23,8 @@ const Calendar = () => {
     if (mode === 'mine' && currentUser) {
       const isOrg = userProfile?.role === 'organizer'
       if (isOrg) {
-        // Organizer sees their own events
         setEvents(getEventsByOrganizer(currentUser.id))
       } else {
-        // Attendee sees events they bought tickets for
         const tickets = getTicketsByUser(currentUser.id)
         const myEvents = tickets.map(t => getEvent(t.eventId)).filter(Boolean)
         setEvents(myEvents)
@@ -96,11 +94,14 @@ const Calendar = () => {
                 {day && (
                   <>
                     <span className="cal-day-num">{day}</span>
-                    {dayEvents.map(e => (
-                      <Link key={e.id} to={`/event/${e.id}`} className="cal-event-dot" title={e.title}>
-                        <span className="cal-event-name">{e.title}</span>
-                      </Link>
-                    ))}
+                    {dayEvents.map(e => {
+                      const isPast = new Date(e.date) < new Date()
+                      return (
+                        <Link key={e.id} to={`/event/${e.id}`} className={`cal-event-dot ${isPast ? 'cal-event-past' : ''}`} title={e.title}>
+                          <span className="cal-event-name">{e.title}</span>
+                        </Link>
+                      )
+                    })}
                   </>
                 )}
               </div>
@@ -110,7 +111,8 @@ const Calendar = () => {
 
         <div className="cal-legend">
           <div className="legend-item"><span className="legend-dot legend-dot--today"></span> Hoy</div>
-          <div className="legend-item"><span className="legend-dot legend-dot--event"></span> {mode === 'mine' ? 'Tu evento' : 'Evento disponible'}</div>
+          <div className="legend-item"><span className="legend-dot legend-dot--event"></span> Próximo</div>
+          <div className="legend-item"><span className="legend-dot legend-dot--past"></span> Finalizado</div>
         </div>
       </div>
     </div>

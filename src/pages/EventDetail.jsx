@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { getEvent, getEvents, createTicket, getTicketsByEvent, getUser, getTicketsByUser, addNotification } from '../lib/db'
+import { getEvent, getEvents, createTicket, getTicketsByEvent, getUser, getTicketsByUser, addNotification, getReviewsByEvent, addReview, getAverageRating, markGoing, getGoingCount, isGoing, getGoingUsers } from '../lib/db'
 import { useAuth } from '../context/AuthContext'
 import { FiCalendar, FiMapPin, FiClock, FiUsers, FiArrowLeft, FiShare2, FiCheck, FiMusic, FiArrowRight } from 'react-icons/fi'
 import Button from '../components/ui/Button'
@@ -21,6 +21,13 @@ const EventDetail = () => {
   const [alreadyOwned, setAlreadyOwned] = useState(false)
   const [relatedEvents, setRelatedEvents] = useState([])
   const [copied, setCopied] = useState(false)
+  const [reviews, setReviews] = useState([])
+  const [avgRating, setAvgRating] = useState(0)
+  const [goingCount, setGoingCount] = useState(0)
+  const [userGoing, setUserGoing] = useState(false)
+  const [goingUsers, setGoingUsers] = useState([])
+  const [reviewText, setReviewText] = useState('')
+  const [reviewRating, setReviewRating] = useState(5)
 
   useEffect(() => {
     const e = getEvent(id)
@@ -33,7 +40,12 @@ const EventDetail = () => {
       if (currentUser) {
         const userTix = getTicketsByUser(currentUser.id)
         setAlreadyOwned(userTix.some(t => t.eventId === id))
+        setUserGoing(isGoing(currentUser.id, id))
       }
+      setReviews(getReviewsByEvent(id))
+      setAvgRating(getAverageRating(id))
+      setGoingCount(getGoingCount(id))
+      setGoingUsers(getGoingUsers(id).slice(0, 5))
     }
     window.scrollTo(0, 0)
   }, [id])
@@ -50,6 +62,7 @@ const EventDetail = () => {
     setPurchasing(true)
     try {
       createTicket({ eventId: id, userId: currentUser.id })
+      markGoing(currentUser.id, id)
       addNotification(currentUser.id, {
         type: 'purchase',
         title: `Ticket comprado: ${event.title}`,
@@ -187,12 +200,17 @@ const EventDetail = () => {
               <div className="ed-section">
                 <h2 className="ed-section-title"><FiMusic /> Line-up</h2>
                 <div className="ed-lineup">
-                  {event.lineup.map((artist, i) => (
-                    <div key={i} className="ed-artist">
-                      <span className="ed-artist-num">{String(i + 1).padStart(2, '0')}</span>
-                      <span className="ed-artist-name">{artist}</span>
-                    </div>
-                  ))}
+                  {event.lineup.map((artist, i) => {
+                    const name = typeof artist === 'string' ? artist : artist.name
+                    const time = typeof artist === 'object' ? artist.time : null
+                    return (
+                      <div key={i} className="ed-artist">
+                        {time && <span className="ed-artist-time">{time}</span>}
+                        <span className="ed-artist-num">{String(i + 1).padStart(2, '0')}</span>
+                        <span className="ed-artist-name">{name}</span>
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
             )}
@@ -214,6 +232,66 @@ const EventDetail = () => {
                   ))}
                 </div>
               </div>
+            )}
+
+            {/* Going section */}
+            {goingCount > 0 && (
+            <div className="ed-section">
+              <h2 className="ed-section-title">🎉 {goingCount} {goingCount === 1 ? 'persona va' : 'personas van'}</h2>
+              {goingUsers.length > 0 && (
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  {goingUsers.map(u => (
+                    <div key={u.id} style={{ padding: '0.3rem 0.8rem', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)' }}>
+                      {u.displayName}
+                    </div>
+                  ))}
+                  {goingCount > 5 && <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)', alignSelf: 'center' }}>+{goingCount - 5} más</span>}
+                </div>
+              )}
+            </div>
+            )}
+
+            {/* Reviews — only for past events */}
+            {new Date(event.date) < new Date() && (
+            <div className="ed-section">
+              <h2 className="ed-section-title">⭐ Reviews {avgRating > 0 && `(${avgRating}/5)`}</h2>
+              {currentUser && !isOrg && !reviews.find(r => r.userId === currentUser.id) && (
+                <div style={{ background: '#141414', padding: '1.25rem', marginBottom: '1rem', border: '1px solid rgba(255,255,255,0.06)' }}>
+                  <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                    {[1,2,3,4,5].map(n => (
+                      <button key={n} onClick={() => setReviewRating(n)}
+                        style={{ background: 'none', border: 'none', fontSize: '1.3rem', cursor: 'pointer', opacity: n <= reviewRating ? 1 : 0.3 }}>⭐</button>
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <input type="text" value={reviewText} onChange={e => setReviewText(e.target.value)}
+                      placeholder="¿Cómo estuvo el evento?"
+                      style={{ flex: 1, padding: '0.75rem', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: '0.85rem', fontFamily: 'var(--font-body)' }} />
+                    <Button size="sm" onClick={() => {
+                      if (!reviewText.trim()) return
+                      const r = addReview({ eventId: id, userId: currentUser.id, rating: reviewRating, text: reviewText, userName: currentUser.displayName })
+                      if (r) { setReviews(prev => [r, ...prev]); setReviewText(''); setAvgRating(getAverageRating(id)); toast.success('Review publicada') }
+                      else toast.warning('Ya dejaste una review')
+                    }}>Publicar</Button>
+                  </div>
+                </div>
+              )}
+              {reviews.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', background: 'rgba(255,255,255,0.04)' }}>
+                  {reviews.map(r => (
+                    <div key={r.id} style={{ background: '#141414', padding: '1rem 1.25rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
+                        <strong style={{ color: '#fff', fontSize: '0.85rem' }}>{r.userName || 'Anónimo'}</strong>
+                        <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.7rem' }}>{'⭐'.repeat(r.rating)}</span>
+                      </div>
+                      <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.85rem', lineHeight: 1.5 }}>{r.text}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.85rem' }}>Aún no hay reviews. ¡Sé el primero!</p>
+              )}
+            </div>
             )}
           </div>
 

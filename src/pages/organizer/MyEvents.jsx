@@ -37,7 +37,7 @@ const MyEvents = () => {
             <span className="dash-tag">Gestión de eventos</span>
             <h1 className="dash-title">Mis Eventos</h1>
           </div>
-          <Link to="/organizer/create-event"><Button icon={<FiPlus />}>Crear Evento</Button></Link>
+          {events.length > 0 && <Link to="/organizer/create-event"><Button icon={<FiPlus />}>Crear Evento</Button></Link>}
         </div>
 
         {events.length > 0 && (
@@ -107,11 +107,10 @@ const MyEvents = () => {
             <button className="me-filter-btn active" onClick={() => setFilter('all')} style={{ margin: '0 auto' }}>Ver todos</button>
           </div>
         ) : (
-          <div className="dash-onboarding" style={{ marginTop: 0 }}>
-            <div className="dash-onb-icon"><FiPlus /></div>
-            <h2>Aún no tienes eventos</h2>
-            <p>Crea tu primer evento y comienza a vender tickets.</p>
-            <Link to="/organizer/create-event"><Button size="lg" icon={<FiPlus />}>Crear mi primer evento</Button></Link>
+          <div className="me-empty">
+            <p className="me-empty-text">Aún no tienes eventos</p>
+            <p className="me-empty-sub">Crea tu primer evento y conecta con tu audiencia</p>
+            <Link to="/organizer/create-event"><Button size="lg">Crear evento</Button></Link>
           </div>
         )}
       </div>

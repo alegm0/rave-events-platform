@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { getEvents } from '../lib/db'
+import { getEvents, getGoingCount } from '../lib/db'
 import { useAuth } from '../context/AuthContext'
 import { FiMapPin, FiSearch, FiArrowRight, FiEye } from 'react-icons/fi'
 import Button from '../components/ui/Button'
@@ -16,7 +16,9 @@ const Events = () => {
   const [activeGenre, setActiveGenre] = useState('all')
 
   useEffect(() => {
-    const data = getEvents()
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const data = getEvents().filter(e => new Date(e.date) >= today)
     setEvents(data)
     setFilteredEvents(data)
     setLoading(false)
@@ -25,11 +27,11 @@ const Events = () => {
   useEffect(() => {
     let f = events
     if (searchTerm) f = f.filter(e => e.title.toLowerCase().includes(searchTerm.toLowerCase()) || e.location?.toLowerCase().includes(searchTerm.toLowerCase()))
-    if (activeGenre !== 'all') f = f.filter(e => e.genre === activeGenre)
+    if (activeGenre !== 'all') f = f.filter(e => e.genre?.toLowerCase().includes(activeGenre.toLowerCase()))
     setFilteredEvents(f)
   }, [searchTerm, activeGenre, events])
 
-  const genres = ['all', 'techno', 'house', 'trance', 'hardstyle']
+  const genres = ['all', 'techno', 'house', 'trance', 'hardstyle', 'drum & bass', 'minimal', 'ambient', 'acid']
 
   if (loading) return (
     <div className="events-page">
@@ -90,7 +92,8 @@ const Events = () => {
         {/* Grid */}
         <div className="events-grid">
           {filteredEvents.map((event, i) => (
-            <Link to={`/event/${event.id}`} key={event.id} className="event-card"
+            <Link to={`/event/${event.id}`} key={event.id}
+              className={`event-card ${new Date(event.date) < new Date() ? 'event-card--past' : ''}`}
               style={{ animationDelay: `${i * 0.08}s` }}>
               <div className="event-card-img">
                 <img src={event.imageUrl || 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800'}
@@ -99,6 +102,7 @@ const Events = () => {
                   <span className="event-card-cta"><FiArrowRight /></span>
                 </div>
                 {event.genre && <span className="event-genre-tag">{event.genre}</span>}
+                {new Date(event.date) < new Date() && <span className="event-past-tag">Finalizado</span>}
               </div>
               <div className="event-card-body">
                 <div className="event-card-date">
@@ -109,6 +113,7 @@ const Events = () => {
                   <h3>{event.title}</h3>
                   <p className="event-card-location"><FiMapPin /> {event.location}</p>
                   {event.time && <p className="event-card-time">{event.time}h</p>}
+                  {getGoingCount(event.id) > 0 && <p className="event-card-going">🎉 {getGoingCount(event.id)} van</p>}
                 </div>
                 <div className="event-card-price">
                   {event.price === 0 ? 'Gratis' : `$${event.price}`}

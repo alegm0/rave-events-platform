@@ -1,0 +1,28 @@
+.search-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px);
+  z-index: 9500; display: flex; align-items: flex-start; justify-content: center; padding: 8vh 1rem;
+  animation: modalFadeIn 0.15s ease;
+}
+.search-modal { background: #141414; border: 1px solid rgba(255,255,255,0.1); width: 100%; max-width: 640px; max-height: 70vh; overflow: hidden; display: flex; flex-direction: column; }
+.search-input-wrap { display: flex; align-items: center; padding: 0 1.25rem; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.search-input-icon { color: rgba(255,255,255,0.3); font-size: 1.1rem; flex-shrink: 0; }
+.search-modal-input { flex: 1; padding: 1.25rem 1rem; background: none; border: none; color: #fff; font-size: 1rem; font-family: var(--font-body); outline: none; }
+.search-modal-input::placeholder { color: rgba(255,255,255,0.3); }
+.search-close { background: none; color: rgba(255,255,255,0.4); font-size: 1.2rem; cursor: pointer; padding: 0.25rem; }
+.search-close:hover { color: #fff; }
+.search-results { overflow-y: auto; flex: 1; }
+.search-group { padding: 0.75rem 0; }
+.search-group h4 { padding: 0.5rem 1.25rem; font-size: 0.65rem; color: rgba(255,255,255,0.35); text-transform: uppercase; letter-spacing: 0.12em; }
+.search-result { display: flex; align-items: center; gap: 1rem; padding: 0.75rem 1.25rem; text-decoration: none; color: inherit; transition: background 0.15s ease; }
+.search-result:hover { background: rgba(255,255,255,0.04); }
+.search-result-img { width: 48px; height: 36px; object-fit: cover; flex-shrink: 0; }
+.search-result-avatar { width: 36px; height: 36px; background: #1a1a1a; display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden; }
+.search-result-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.search-result-avatar span { font-weight: 800; color: rgba(255,255,255,0.2); }
+.search-result-info { flex: 1; }
+.search-result-info strong { display: block; color: #fff; font-size: 0.85rem; margin-bottom: 0.1rem; }
+.search-result-info span { display: flex; align-items: center; gap: 0.3rem; font-size: 0.7rem; color: rgba(255,255,255,0.4); }
+.search-result-info svg { font-size: 0.65rem; }
+.search-result-price { font-size: 0.85rem; font-weight: 700; color: #fff; white-space: nowrap; }
+.search-empty { padding: 3rem 1.25rem; text-align: center; color: rgba(255,255,255,0.4); font-size: 0.9rem; }
+.search-hint { padding: 2rem 1.25rem; text-align: center; color: rgba(255,255,255,0.25); font-size: 0.85rem; }

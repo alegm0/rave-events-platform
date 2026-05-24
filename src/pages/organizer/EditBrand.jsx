@@ -42,16 +42,31 @@ const EditBrand = () => {
   })
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+  const [errors, setErrors] = useState({})
 
   const handleSave = () => {
+    const e = {}
+    if (!form.name.trim()) e.name = 'El nombre es obligatorio'
+    if (form.founded && (!/^\d{4}$/.test(form.founded) || parseInt(form.founded) < 1990 || parseInt(form.founded) > new Date().getFullYear())) {
+      e.founded = 'Ingresa un año válido (ej: 2020)'
+    }
+    if (form.instagram && !form.instagram.startsWith('@')) {
+      set('instagram', '@' + form.instagram)
+    }
+    if (form.website && form.website.startsWith('http')) {
+      set('website', form.website.replace(/^https?:\/\//, ''))
+    }
+    setErrors(e)
+    if (Object.keys(e).length > 0) { toast.error('Revisa los campos marcados'); return }
+
     updateProfile({
       displayName: form.name,
       brand: {
         name: form.name,
         bio: form.bio,
         city: form.city,
-        instagram: form.instagram,
-        website: form.website,
+        instagram: form.instagram.startsWith('@') ? form.instagram : (form.instagram ? '@' + form.instagram : ''),
+        website: form.website.replace(/^https?:\/\//, ''),
         founded: form.founded,
         logo: form.uploadedLogo || form.logo,
         cover: form.cover,
@@ -135,7 +150,8 @@ const EditBrand = () => {
               <div className="eb-field">
                 <label>Nombre de la marca *</label>
                 <input type="text" value={form.name} onChange={e => set('name', e.target.value)}
-                  placeholder="Ej: NOCTURN Collective" />
+                  placeholder="Ej: NOCTURN Collective" className={errors.name ? 'error' : ''} />
+                {errors.name && <span style={{ color: '#ff3d00', fontSize: '0.7rem' }}>{errors.name}</span>}
               </div>
               <div className="eb-field">
                 <label>Bio / Descripción</label>
@@ -153,7 +169,8 @@ const EditBrand = () => {
                 <div className="eb-field">
                   <label>Año de fundación</label>
                   <input type="text" value={form.founded} onChange={e => set('founded', e.target.value)}
-                    placeholder="Ej: 2020" maxLength={4} />
+                    placeholder="Ej: 2020" maxLength={4} className={errors.founded ? 'error' : ''} />
+                  {errors.founded && <span style={{ color: '#ff3d00', fontSize: '0.7rem' }}>{errors.founded}</span>}
                 </div>
               </div>
             </div>

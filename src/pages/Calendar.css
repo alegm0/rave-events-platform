@@ -99,3 +99,10 @@
 }
 .cal-mode-toggle button:hover { color: #1a1a1a; }
 .cal-mode-toggle button.active { background: #1a1a1a; color: #fff; }
+
+
+/* Past events in calendar */
+.cal-event-past { background: rgba(0,0,0,0.2); opacity: 0.5; }
+.cal-event-past .cal-event-name { color: rgba(0,0,0,0.5); }
+
+.legend-dot--past { background: rgba(0,0,0,0.2); border: 1px solid rgba(0,0,0,0.15); }

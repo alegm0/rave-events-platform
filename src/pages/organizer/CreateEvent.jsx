@@ -8,14 +8,14 @@ import { useToast } from '../../components/ui/Toast'
 import './CreateEvent.css'
 
 const GENRES = [
-  { value: 'techno', label: 'Techno', emoji: '🔊' },
-  { value: 'house', label: 'House', emoji: '🏠' },
-  { value: 'trance', label: 'Trance', emoji: '🌀' },
-  { value: 'hardstyle', label: 'Hardstyle', emoji: '⚡' },
-  { value: 'dnb', label: 'Drum & Bass', emoji: '🥁' },
-  { value: 'ambient', label: 'Ambient', emoji: '🌊' },
-  { value: 'minimal', label: 'Minimal', emoji: '◻️' },
-  { value: 'acid', label: 'Acid', emoji: '🧪' },
+  'Techno', 'House', 'Trance', 'Hardstyle', 'Drum & Bass', 'Ambient', 'Minimal', 'Acid',
+  'Deep House', 'Tech House', 'Afro House', 'Melodic Techno', 'Industrial Techno', 'Dark Techno',
+  'Progressive House', 'Progressive Trance', 'Psytrance', 'Goa Trance',
+  'Dubstep', 'Future Bass', 'Garage', 'UK Garage', 'Breakbeat', 'Electro',
+  'Downtempo', 'Lo-Fi', 'IDM', 'Experimental', 'Synthwave', 'EBM',
+  'Disco', 'Nu Disco', 'Italo Disco', 'Funk', 'Afrobeat',
+  'Hardcore', 'Gabber', 'Frenchcore', 'Hard Techno',
+  'Dub Techno', 'Microhouse', 'Organic House', 'Tribal',
 ]
 
 const IMAGES = [
@@ -35,14 +35,24 @@ const CreateEvent = () => {
   const { currentUser } = useAuth()
   const navigate = useNavigate()
   const toast = useToast()
+  const [genreSearch, setGenreSearch] = useState('')
+  const [showGenres, setShowGenres] = useState(false)
+  const [lineupMode, setLineupMode] = useState('individual')
+  const [bulkLineup, setBulkLineup] = useState('')
   const [step, setStep] = useState(1)
   const [errors, setErrors] = useState({})
   const [form, setForm] = useState({
     title: '', description: '', date: '', time: '22:00', duration: '6',
     multiDay: false, endDate: '',
     location: '', address: '', city: '', price: '0', capacity: '200',
-    genre: '', imageUrl: '', imagePos: 50, minAge: '18', lineup: '',
+    genre: '', imageUrl: '', imagePos: 50, minAge: '18',
+    lineup: [],
     uploadedImage: null,
+    pricingMode: 'single', // 'single' or 'tiers'
+    tiers: [
+      { name: 'Early Bird', price: '', qty: '' },
+      { name: 'First Release', price: '', qty: '' },
+    ],
   })
 
   const set = (field, value) => {
@@ -92,12 +102,14 @@ const CreateEvent = () => {
       location: form.location.trim(),
       address: form.address.trim(),
       city: form.city.trim(),
-      price: parseFloat(form.price) || 0,
+      price: form.pricingMode === 'single' ? (parseFloat(form.price) || 0) : parseFloat(form.tiers[0]?.price || 0),
+      pricingMode: form.pricingMode,
+      tiers: form.pricingMode === 'tiers' ? form.tiers.filter(t => t.name && t.price) : [],
       capacity: parseInt(form.capacity) || 200,
       genre: form.genre,
       imageUrl: form.imageUrl || IMAGES[0],
       minAge: parseInt(form.minAge) || 18,
-      lineup: form.lineup.split(',').map(s => s.trim()).filter(Boolean),
+      lineup: form.lineup.filter(a => a.name.trim()),
       organizerId: currentUser.id,
       status: 'active',
       ticketsSold: 0,
@@ -142,15 +154,29 @@ const CreateEvent = () => {
 
                 <div className="ce-field">
                   <label>Género musical *</label>
-                  <div className="ce-genre-grid">
-                    {GENRES.map(g => (
-                      <button key={g.value} type="button"
-                        className={`ce-genre-btn ${form.genre === g.value ? 'active' : ''}`}
-                        onClick={() => set('genre', g.value)}>
-                        <span className="ce-genre-emoji">{g.emoji}</span>
-                        <span>{g.label}</span>
-                      </button>
-                    ))}
+                  <div className="ce-genre-search-wrap">
+                    <input type="text" value={form.genre || genreSearch}
+                      onChange={e => { setGenreSearch(e.target.value); set('genre', ''); setShowGenres(true) }}
+                      onFocus={() => setShowGenres(true)}
+                      placeholder="Buscar género: techno, house, afro house..."
+                      className={errors.genre ? 'error' : ''} />
+                    {form.genre && (
+                      <button type="button" className="ce-genre-clear" onClick={() => { set('genre', ''); setGenreSearch('') }}>✕</button>
+                    )}
+                    {showGenres && (
+                      <div className="ce-genre-dropdown">
+                        {GENRES.filter(g => g.toLowerCase().includes((genreSearch || '').toLowerCase())).slice(0, 10).map(g => (
+                          <button key={g} type="button" className="ce-genre-option"
+                            onClick={() => { set('genre', g); setGenreSearch(''); setShowGenres(false) }}>{g}</button>
+                        ))}
+                        {genreSearch && !GENRES.find(g => g.toLowerCase() === genreSearch.toLowerCase()) && (
+                          <button type="button" className="ce-genre-option ce-genre-custom"
+                            onClick={() => { set('genre', genreSearch); setShowGenres(false) }}>
+                            Usar "{genreSearch}" como género
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                   {errors.genre && <span className="ce-error">{errors.genre}</span>}
                 </div>
@@ -168,8 +194,50 @@ const CreateEvent = () => {
 
                 <div className="ce-field">
                   <label>Line-up (opcional)</label>
-                  <input type="text" value={form.lineup} onChange={e => set('lineup', e.target.value)}
-                    placeholder="DJ1, DJ2, DJ3 (separados por coma)" />
+                  <div className="ce-lineup-modes">
+                    <button type="button" className={`ce-lineup-mode ${lineupMode === 'individual' ? 'active' : ''}`}
+                      onClick={() => setLineupMode('individual')}>Uno por uno</button>
+                    <button type="button" className={`ce-lineup-mode ${lineupMode === 'bulk' ? 'active' : ''}`}
+                      onClick={() => setLineupMode('bulk')}>Pegar lista</button>
+                  </div>
+
+                  {lineupMode === 'individual' ? (
+                    <div className="ce-lineup-list">
+                      {form.lineup.map((artist, i) => (
+                        <div key={i} className="ce-lineup-row">
+                          <input type="time" value={artist.time} onChange={e => {
+                            const updated = [...form.lineup]; updated[i] = { ...updated[i], time: e.target.value }; set('lineup', updated)
+                          }} className="ce-lineup-time" />
+                          <input type="text" value={artist.name} onChange={e => {
+                            const updated = [...form.lineup]; updated[i] = { ...updated[i], name: e.target.value }; set('lineup', updated)
+                          }} placeholder="Nombre del DJ / Artista" className="ce-lineup-name" />
+                          <button type="button" className="ce-lineup-remove" onClick={() => {
+                            set('lineup', form.lineup.filter((_, j) => j !== i))
+                          }}>✕</button>
+                        </div>
+                      ))}
+                      <button type="button" className="ce-lineup-add" onClick={() => {
+                        set('lineup', [...form.lineup, { name: '', time: '' }])
+                      }}>+ Agregar artista</button>
+                    </div>
+                  ) : (
+                    <div>
+                      <textarea value={bulkLineup} onChange={e => setBulkLineup(e.target.value)}
+                        placeholder="Pega tu lista de artistas, uno por línea:&#10;23:00 Amelie Lens&#10;01:00 FJAAK&#10;03:00 Kobosil&#10;&#10;O solo nombres:&#10;Amelie Lens&#10;FJAAK&#10;Kobosil"
+                        rows={6} style={{ width: '100%', padding: '0.75rem', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: '0.85rem', fontFamily: 'var(--font-body)', resize: 'vertical' }} />
+                      <button type="button" className="ce-lineup-add" style={{ marginTop: '0.5rem' }} onClick={() => {
+                        const lines = bulkLineup.split('\n').filter(l => l.trim())
+                        const parsed = lines.map(line => {
+                          const timeMatch = line.match(/^(\d{1,2}:\d{2})\s+(.+)/)
+                          if (timeMatch) return { time: timeMatch[1], name: timeMatch[2].trim() }
+                          return { time: '', name: line.trim() }
+                        })
+                        set('lineup', [...form.lineup, ...parsed])
+                        setBulkLineup('')
+                        setLineupMode('individual')
+                      }}>Importar {bulkLineup.split('\n').filter(l => l.trim()).length} artistas</button>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -264,41 +332,62 @@ const CreateEvent = () => {
                 <h2 className="ce-step-title">Tickets y capacidad</h2>
                 <p className="ce-step-desc">Define el precio y cuántas personas pueden asistir.</p>
 
-                <div className="ce-row">
-                  <div className="ce-field">
-                    <label><FiDollarSign /> Precio del ticket (USD)</label>
-                    <input type="number" value={form.price} min="0" step="0.01"
-                      onChange={e => set('price', e.target.value)} className={errors.price ? 'error' : ''} />
-                    {errors.price && <span className="ce-error">{errors.price}</span>}
-                    <span className="ce-hint">{parseFloat(form.price) === 0 ? '🎉 Evento gratuito' : `💰 $${parseFloat(form.price || 0).toFixed(2)} por ticket`}</span>
-                  </div>
-                  <div className="ce-field">
-                    <label><FiUsers /> Capacidad máxima</label>
-                    <input type="number" value={form.capacity} min="10" max="50000"
-                      onChange={e => set('capacity', e.target.value)} className={errors.capacity ? 'error' : ''} />
-                    {errors.capacity && <span className="ce-error">{errors.capacity}</span>}
-                  </div>
+                <div className="ce-field">
+                  <label><FiUsers /> Capacidad máxima</label>
+                  <input type="number" value={form.capacity} min="10" max="50000"
+                    onChange={e => set('capacity', e.target.value)} className={errors.capacity ? 'error' : ''} />
+                  {errors.capacity && <span className="ce-error">{errors.capacity}</span>}
                 </div>
 
                 <div className="ce-field">
-                  <label>Edad mínima</label>
+                  <label><FiDollarSign /> Tipo de precio</label>
+                  <div className="ce-lineup-modes">
+                    <button type="button" className={`ce-lineup-mode ${form.pricingMode === 'single' ? 'active' : ''}`} onClick={() => set('pricingMode', 'single')}>Precio unico</button>
+                    <button type="button" className={`ce-lineup-mode ${form.pricingMode === 'tiers' ? 'active' : ''}`} onClick={() => set('pricingMode', 'tiers')}>Por fases</button>
+                  </div>
+                </div>
+
+                {form.pricingMode === 'single' ? (
+                  <div className="ce-field">
+                    <label>Precio (USD)</label>
+                    <input type="number" value={form.price} min="0" step="1"
+                      onChange={e => set('price', e.target.value)} className={errors.price ? 'error' : ''} />
+                    {errors.price && <span className="ce-error">{errors.price}</span>}
+                    <span className="ce-hint">{parseFloat(form.price) === 0 ? 'Evento gratuito' : `$${parseFloat(form.price || 0)} por ticket`}</span>
+                  </div>
+                ) : (
+                  <div className="ce-field">
+                    <label>Fases de precio</label>
+                    <div className="ce-tiers">
+                      {form.tiers.map((tier, i) => (
+                        <div key={i} className="ce-tier-row">
+                          <input type="text" value={tier.name} placeholder="Ej: Early Bird" onChange={e => { const t = [...form.tiers]; t[i] = { ...t[i], name: e.target.value }; set('tiers', t) }} className="ce-tier-name" />
+                          <div className="ce-tier-price-wrap"><span className="ce-tier-dollar">$</span><input type="number" value={tier.price} placeholder="0" min="0" onChange={e => { const t = [...form.tiers]; t[i] = { ...t[i], price: e.target.value }; set('tiers', t) }} className="ce-tier-price" /></div>
+                          <input type="number" value={tier.qty} placeholder="Cant." min="1" onChange={e => { const t = [...form.tiers]; t[i] = { ...t[i], qty: e.target.value }; set('tiers', t) }} className="ce-tier-qty" />
+                          {form.tiers.length > 1 && <button type="button" className="ce-lineup-remove" onClick={() => set('tiers', form.tiers.filter((_, j) => j !== i))}>x</button>}
+                        </div>
+                      ))}
+                      <button type="button" className="ce-lineup-add" onClick={() => set('tiers', [...form.tiers, { name: '', price: '', qty: '' }])}>+ Agregar fase</button>
+                    </div>
+                    <span className="ce-hint">Cuando se agotan los tickets de una fase, se activa la siguiente.</span>
+                  </div>
+                )}
+
+                <div className="ce-field">
+                  <label>Edad minima</label>
                   <div className="ce-age-options">
                     {['16', '18', '21'].map(age => (
-                      <button key={age} type="button"
-                        className={`ce-age-btn ${form.minAge === age ? 'active' : ''}`}
-                        onClick={() => set('minAge', age)}>
-                        +{age}
-                      </button>
+                      <button key={age} type="button" className={`ce-age-btn ${form.minAge === age ? 'active' : ''}`} onClick={() => set('minAge', age)}>+{age}</button>
                     ))}
                   </div>
                 </div>
 
-                {parseFloat(form.price) > 0 && parseInt(form.capacity) > 0 && (
-                  <div className="ce-revenue-preview">
-                    <span>Ingreso potencial máximo</span>
-                    <strong>${(parseFloat(form.price) * parseInt(form.capacity)).toLocaleString()}</strong>
-                  </div>
-                )}
+                {(() => {
+                  let rev = 0
+                  if (form.pricingMode === 'single') rev = parseFloat(form.price || 0) * parseInt(form.capacity || 0)
+                  else form.tiers.forEach(t => { rev += parseFloat(t.price || 0) * parseInt(t.qty || 0) })
+                  return rev > 0 ? (<div className="ce-revenue-preview"><span>Ingreso potencial</span><strong>{'$' + rev.toLocaleString()}</strong></div>) : null
+                })()}
               </div>
             )}
 
@@ -410,9 +499,7 @@ const CreateEvent = () => {
               <div className="ce-preview-img">
                 <img src={form.imageUrl || IMAGES[0]} alt="" style={{ objectPosition: `center ${form.imagePos}%` }} />
                 {form.genre && (
-                  <span className="ce-preview-genre">
-                    {GENRES.find(g => g.value === form.genre)?.emoji} {form.genre}
-                  </span>
+                  <span className="ce-preview-genre">{form.genre}</span>
                 )}
                 {parseInt(form.duration) > 20 && <span className="ce-preview-multiday">Multi-día</span>}
               </div>

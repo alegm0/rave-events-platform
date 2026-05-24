@@ -2,14 +2,16 @@ import { useState, useEffect } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { getNotifications, getUnreadCount, markAllRead } from '../../lib/db'
-import { FiMenu, FiX, FiUser, FiLogOut, FiPlus, FiBell } from 'react-icons/fi'
+import { FiMenu, FiX, FiUser, FiLogOut, FiBell, FiSearch } from 'react-icons/fi'
 import Button from '../ui/Button'
+import SearchModal from '../ui/SearchModal'
 import './Navbar.css'
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const [showNotifs, setShowNotifs] = useState(false)
+  const [showSearch, setShowSearch] = useState(false)
   const { currentUser, userProfile, logout } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
@@ -24,7 +26,14 @@ const Navbar = () => {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  useEffect(() => { setIsOpen(false); setShowNotifs(false) }, [location])
+  useEffect(() => { setIsOpen(false); setShowNotifs(false); setShowSearch(false) }, [location])
+
+  // Keyboard shortcut Ctrl+K for search
+  useEffect(() => {
+    const handler = (e) => { if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); setShowSearch(true) } }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [])
 
   const handleLogout = async () => {
     try { await logout(); navigate('/') } catch (e) { console.error(e) }
@@ -56,8 +65,7 @@ const Navbar = () => {
                 <Link to="/organizer/dashboard" className={`nav-link ${isActive('/organizer/dashboard')}`}>Dashboard</Link>
                 <Link to="/organizer/my-events" className={`nav-link ${isActive('/organizer/my-events')}`}>Mis Eventos</Link>
                 <Link to="/organizer/create-event" className={`nav-link ${isActive('/organizer/create-event')}`}>Crear Evento</Link>
-                <Link to="/organizer/edit-brand" className={`nav-link ${isActive('/organizer/edit-brand')}`}>Mi Marca</Link>
-                <Link to="/events" className={`nav-link ${isActive('/events')}`}>Explorar</Link>
+                <Link to={userProfile?.brand?.name ? `/organizer/${currentUser?.id}` : '/organizer/edit-brand'} className={`nav-link ${isActive('/organizer/edit-brand') || location.pathname.startsWith('/organizer/' + currentUser?.id) ? 'active' : ''}`}>Mi Marca</Link>
               </>
             ) : (
               <>
@@ -69,9 +77,15 @@ const Navbar = () => {
           </div>
 
           <div className="navbar-auth desktop-menu">
+            {/* Global search - only for ravers */}
+            {(!currentUser || !isOrg) && (
+              <button className="nav-search-btn" onClick={() => setShowSearch(true)} title="Buscar (Ctrl+K)">
+                <FiSearch /> <span className="nav-search-hint">Ctrl+K</span>
+              </button>
+            )}
+
             {currentUser ? (
               <>
-                {isOrg && <Link to="/organizer/create-event"><Button size="sm" icon={<FiPlus />}>Nuevo</Button></Link>}
                 {!isOrg && <Link to="/my-tickets"><Button variant="ghost" size="sm">Mis Tickets</Button></Link>}
 
                 {/* Notification bell */}
@@ -132,8 +146,8 @@ const Navbar = () => {
               <>
                 <Link to="/organizer/dashboard" className="mobile-link">Dashboard</Link>
                 <Link to="/organizer/my-events" className="mobile-link">Mis Eventos</Link>
-                <Link to="/organizer/create-event" className="mobile-link"><FiPlus /> Crear Evento</Link>
-                <Link to="/events" className="mobile-link">Explorar Eventos</Link>
+                <Link to="/organizer/create-event" className="mobile-link">Crear Evento</Link>
+                <Link to="/organizer/edit-brand" className="mobile-link">Mi Marca</Link>
               </>
             ) : (
               <>
@@ -157,6 +171,7 @@ const Navbar = () => {
           </div>
         )}
       </div>
+      <SearchModal isOpen={showSearch} onClose={() => setShowSearch(false)} />
     </nav>
   )
 }

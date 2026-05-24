@@ -140,3 +140,16 @@
   margin-left: auto; color: #ff3d00; font-weight: 600; text-transform: uppercase;
   letter-spacing: 0.08em; font-size: 0.65rem; white-space: nowrap;
 }
+
+.event-card-going { font-size: 0.7rem; color: #4caf50; margin-top: 0.15rem; }
+
+
+/* Past events */
+.event-card--past { opacity: 0.5; }
+.event-card--past:hover { opacity: 0.75; }
+.event-card--past .event-card-img img { filter: brightness(0.4) saturate(0.2); }
+.event-past-tag {
+  position: absolute; top: 1rem; right: 1rem; padding: 0.3rem 0.8rem;
+  background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.7);
+  font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.12em; font-weight: 600;
+}

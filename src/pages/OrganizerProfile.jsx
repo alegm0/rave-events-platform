@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { getUser, getEventsByOrganizer, getTicketsByEvent } from '../lib/db'
-import { FiMapPin, FiCalendar, FiUsers, FiInstagram, FiGlobe, FiArrowRight } from 'react-icons/fi'
+import { useAuth } from '../context/AuthContext'
+import { FiMapPin, FiCalendar, FiUsers, FiInstagram, FiGlobe, FiArrowRight, FiEdit } from 'react-icons/fi'
 import Button from '../components/ui/Button'
 import './OrganizerProfile.css'
 
 const OrganizerProfile = () => {
   const { id } = useParams()
+  const { currentUser } = useAuth()
+  const isOwner = currentUser?.id === id
   const [org, setOrg] = useState(null)
   const [events, setEvents] = useState([])
   const [totalTickets, setTotalTickets] = useState(0)
@@ -65,6 +68,9 @@ const OrganizerProfile = () => {
                 </a>
               )}
             </div>
+            {isOwner && (
+              <Link to="/organizer/edit-brand" className="op-edit-btn"><FiEdit /> Editar perfil</Link>
+            )}
           </div>
           <div className="op-header-stats">
             <div className="op-hstat">

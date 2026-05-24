@@ -1,15 +1,20 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { getTicket, getEvent, getUser } from '../lib/db'
+import { getTicket, getEvent, getUser, cancelTicket } from '../lib/db'
 import { QRCodeSVG } from 'qrcode.react'
-import { FiCalendar, FiMapPin, FiClock, FiArrowLeft, FiUser, FiMusic } from 'react-icons/fi'
+import { FiCalendar, FiMapPin, FiClock, FiArrowLeft, FiUser, FiMusic, FiTrash2 } from 'react-icons/fi'
+import Button from '../components/ui/Button'
+import Modal from '../components/ui/Modal'
+import { useToast } from '../components/ui/Toast'
 import './TicketDetail.css'
 
 const TicketDetail = () => {
   const { id } = useParams()
   const navigate = useNavigate()
+  const toast = useToast()
   const [ticket, setTicket] = useState(null)
   const [event, setEvent] = useState(null)
+  const [showCancel, setShowCancel] = useState(false)
   const [organizer, setOrganizer] = useState(null)
 
   useEffect(() => {
@@ -21,6 +26,15 @@ const TicketDetail = () => {
       if (e) setOrganizer(getUser(e.organizerId))
     }
   }, [id])
+
+  const handleCancel = () => {
+    if (cancelTicket(id)) {
+      toast.success('Ticket cancelado y reembolsado')
+      navigate('/my-tickets')
+    } else {
+      toast.error('No se puede cancelar un ticket ya usado')
+    }
+  }
 
   if (!ticket) return <div className="td-loading"><div className="loader"></div></div>
 
@@ -135,7 +149,7 @@ const TicketDetail = () => {
                 <h3><FiMusic /> Line-up</h3>
                 <div className="td-lineup">
                   {event.lineup.map((a, i) => (
-                    <div key={i} className="td-artist">{a}</div>
+                    <div key={i} className="td-artist">{typeof a === 'string' ? a : a.name}{typeof a === 'object' && a.time ? ` · ${a.time}` : ''}</div>
                   ))}
                 </div>
               </div>
@@ -152,9 +166,32 @@ const TicketDetail = () => {
                 <li>El ticket es personal e intransferible</li>
               </ul>
             </div>
+
+            {/* Cancel ticket */}
+            {ticket.status === 'valid' && (
+              <div className="td-sidebar-card">
+                <h3><FiTrash2 /> Cancelar ticket</h3>
+                <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.8rem', marginBottom: '1rem', lineHeight: 1.5 }}>
+                  Si no puedes asistir, puedes cancelar tu ticket.
+                </p>
+                <Button variant="ghost" fullWidth onClick={() => setShowCancel(true)} className="btn-danger-ghost">
+                  Cancelar Ticket
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </div>
+
+      <Modal isOpen={showCancel} onClose={() => setShowCancel(false)} title="Cancelar ticket" size="sm">
+        <p style={{ color: 'rgba(255,255,255,0.6)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
+          ¿Estás seguro de cancelar tu ticket para <strong style={{ color: '#fff' }}>{event?.title}</strong>?
+        </p>
+        <div style={{ display: 'flex', gap: '0.75rem' }}>
+          <Button variant="ghost" fullWidth onClick={() => setShowCancel(false)}>No, mantener</Button>
+          <Button variant="danger" fullWidth onClick={handleCancel}>Sí, cancelar</Button>
+        </div>
+      </Modal>
     </div>
   )
 }

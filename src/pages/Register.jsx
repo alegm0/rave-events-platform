@@ -40,6 +40,12 @@ const Register = () => {
     if (formData.password.length < 6) {
       return setError('La contraseña debe tener al menos 6 caracteres')
     }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      return setError('Ingresa un correo electrónico válido')
+    }
+    if (formData.displayName.trim().length < 2) {
+      return setError('El nombre debe tener al menos 2 caracteres')
+    }
 
     setLoading(true)
 

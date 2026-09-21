@@ -165,3 +165,51 @@
   font-family: 'Courier New', monospace; font-size: 0.8rem; color: #ff3d00;
   font-weight: 700; min-width: 50px;
 }
+
+/* ── Rave Mode entry button ── */
+.ed-ravemode-btn {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  width: 100%;
+  padding: 1rem 1.25rem 1rem 2.6rem;
+  margin-bottom: 1.5rem;
+  background: linear-gradient(135deg, rgba(255, 61, 0, 0.14), rgba(255, 61, 0, 0.04));
+  border: 1px solid rgba(255, 61, 0, 0.35);
+  color: #fff;
+  font-family: var(--font-body, sans-serif);
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+.ed-ravemode-btn:hover {
+  border-color: #ff3d00;
+  background: linear-gradient(135deg, rgba(255, 61, 0, 0.22), rgba(255, 61, 0, 0.06));
+}
+.ed-ravemode-btn small {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.55);
+  letter-spacing: 0;
+}
+.ed-ravemode-pulse {
+  position: absolute;
+  left: 1.25rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ff3d00;
+  box-shadow: 0 0 0 0 rgba(255, 61, 0, 0.6);
+  animation: ed-pulse 1.8s infinite;
+}
+@keyframes ed-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(255, 61, 0, 0.55); }
+  70% { box-shadow: 0 0 0 10px rgba(255, 61, 0, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 61, 0, 0); }
+}

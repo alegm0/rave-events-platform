@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
-import { FiCheck, FiImage, FiInstagram, FiGlobe, FiMapPin } from 'react-icons/fi'
+import { uploadImage } from '../../lib/storage'
+import { FiCheck, FiImage, FiInstagram, FiGlobe, FiMapPin, FiLoader } from 'react-icons/fi'
 import Button from '../../components/ui/Button'
 import { useToast } from '../../components/ui/Toast'
 import '../organizer/Dashboard.css'
@@ -39,12 +40,15 @@ const EditBrand = () => {
     logo: brand.logo || '',
     cover: brand.cover || '',
     uploadedLogo: null,
+    logoFile: null,
+    coverFile: null,
   })
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
   const [errors, setErrors] = useState({})
+  const [saving, setSaving] = useState(false)
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const e = {}
     if (!form.name.trim()) e.name = 'El nombre es obligatorio'
     if (form.founded && (!/^\d{4}$/.test(form.founded) || parseInt(form.founded) < 1990 || parseInt(form.founded) > new Date().getFullYear())) {
@@ -59,32 +63,54 @@ const EditBrand = () => {
     setErrors(e)
     if (Object.keys(e).length > 0) { toast.error('Revisa los campos marcados'); return }
 
-    updateProfile({
-      displayName: form.name,
-      brand: {
-        name: form.name,
-        bio: form.bio,
-        city: form.city,
-        instagram: form.instagram.startsWith('@') ? form.instagram : (form.instagram ? '@' + form.instagram : ''),
-        website: form.website.replace(/^https?:\/\//, ''),
-        founded: form.founded,
-        logo: form.uploadedLogo || form.logo,
-        cover: form.cover,
+    setSaving(true)
+    try {
+      // Upload images to Firebase Storage if new files were selected
+      let finalLogo = form.uploadedLogo || form.logo
+      let finalCover = form.cover
+
+      if (form.logoFile) {
+        finalLogo = await uploadImage(form.logoFile, `brands/${currentUser.id}/logo`)
       }
-    })
-    navigate(`/organizer/${currentUser.id}`)
-    toast.success('Perfil de marca actualizado')
+      if (form.coverFile) {
+        finalCover = await uploadImage(form.coverFile, `brands/${currentUser.id}/cover`)
+      }
+
+      await updateProfile({
+        displayName: form.name,
+        brand: {
+          name: form.name,
+          bio: form.bio,
+          city: form.city,
+          instagram: form.instagram.startsWith('@') ? form.instagram : (form.instagram ? '@' + form.instagram : ''),
+          website: form.website.replace(/^https?:\/\//, ''),
+          founded: form.founded,
+          logo: finalLogo,
+          cover: finalCover,
+        }
+      })
+      navigate(`/organizer/${currentUser.id}`)
+      toast.success('Perfil de marca actualizado')
+    } catch (err) {
+      toast.error('Error guardando: ' + err.message)
+    } finally {
+      setSaving(false)
+    }
   }
 
   const handleFileUpload = (e, field) => {
     const file = e.target.files[0]
     if (!file) return
-    const reader = new FileReader()
-    reader.onload = (ev) => {
-      if (field === 'logo') { set('uploadedLogo', ev.target.result); set('logo', ev.target.result) }
-      else set('cover', ev.target.result)
+    if (file.size > 5 * 1024 * 1024) { toast.error('La imagen no puede superar 5MB'); return }
+    const previewUrl = URL.createObjectURL(file)
+    if (field === 'logo') {
+      set('logoFile', file)
+      set('uploadedLogo', previewUrl)
+      set('logo', previewUrl)
+    } else {
+      set('coverFile', file)
+      set('cover', previewUrl)
     }
-    reader.readAsDataURL(file)
   }
 
   const logoSrc = form.uploadedLogo || form.logo
@@ -192,7 +218,9 @@ const EditBrand = () => {
 
             <div className="eb-actions">
               <Button variant="ghost" onClick={() => navigate(-1)}>Cancelar</Button>
-              <Button size="lg" onClick={handleSave} icon={<FiCheck />}>Guardar Perfil</Button>
+              <Button size="lg" onClick={handleSave} icon={saving ? <FiLoader className="spin" /> : <FiCheck />} disabled={saving}>
+                {saving ? 'Guardando...' : 'Guardar Perfil'}
+              </Button>
             </div>
           </div>
 

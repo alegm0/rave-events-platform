@@ -1,0 +1,292 @@
+/* ═══════════════════════════════════════════
+   Venue Experience Map — concert seating-map look
+   Solid tiled zones + clean pins + selection panel.
+   ═══════════════════════════════════════════ */
+
+.venue {
+  background: #111;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.venue-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.1rem;
+}
+.venue-title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.venue-setting {
+  display: block;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.4);
+  margin-top: 0.25rem;
+  margin-left: 1.4rem;
+}
+.venue-layout-tag {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 0.25rem 0.6rem;
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  white-space: nowrap;
+}
+
+/* ── Map surface ── */
+.venue-map-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  max-width: 520px;
+  margin: 0 auto;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  border-radius: 4px;
+}
+.venue-svg { width: 100%; height: 100%; display: block; }
+.venue-svg.is-indoor { background: radial-gradient(130% 100% at 50% 0%, #17171a 0%, #0b0b0c 72%); }
+.venue-svg.is-outdoor { background: radial-gradient(130% 100% at 50% 0%, #101710 0%, #090c08 72%); }
+
+/* zones — solid tiles */
+.vm-zone {
+  fill: rgba(255, 255, 255, 0.05);
+  stroke: #0b0b0c;
+  stroke-width: 0.6;
+  vector-effect: non-scaling-stroke;
+  transition: fill 0.2s ease, opacity 0.2s ease;
+}
+.vm-zone--stage { fill: rgba(255, 61, 0, 0.16); }
+.vm-zone--quiet { fill: rgba(120, 160, 255, 0.14); }
+.vm-stage-bar { fill: #ff3d00; }
+
+.vm-zone-g.is-hl .vm-zone { fill: rgba(120, 160, 255, 0.3); }
+.vm-zone-g.is-sel .vm-zone { fill: rgba(255, 61, 0, 0.34); }
+.vm-zone-g.is-sel .vm-zone--quiet { fill: rgba(120, 160, 255, 0.4); }
+.vm-zone-g.is-dim { opacity: 0.45; }
+.vm-zone-g:hover .vm-zone { fill: rgba(255, 255, 255, 0.12); }
+
+.vm-zone-label {
+  fill: rgba(255, 255, 255, 0.75);
+  font-size: 3.4px;
+  font-weight: 700;
+  font-family: var(--font-body, sans-serif);
+  pointer-events: none;
+  paint-order: stroke;
+  stroke: rgba(0, 0, 0, 0.5);
+  stroke-width: 0.8px;
+}
+.vm-zone-label.is-stage {
+  fill: #fff;
+  font-size: 3.6px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* ── Pins ── */
+/* pins live in a translated group; keep them visually consistent despite
+   the non-uniform scale by drawing them small and centered. */
+.vm-pin-body { fill: #17171a; stroke: rgba(0, 0, 0, 0.7); stroke-width: 0.3; vector-effect: non-scaling-stroke; }
+.vm-pin-disc { fill: #cfcfcf; }
+.vm-pin-glyph { fill: #111; }
+.vm-pin-acc { fill: #9cb4ff; stroke: #0b0b0c; stroke-width: 0.3; vector-effect: non-scaling-stroke; }
+
+.vm-pin--entrance .vm-pin-disc { fill: #4caf50; }
+.vm-pin--water    .vm-pin-disc { fill: #2196f3; }
+.vm-pin--toilet   .vm-pin-disc { fill: #b39dff; }
+.vm-pin--firstaid .vm-pin-disc { fill: #ff3d00; }
+.vm-pin--rest     .vm-pin-disc { fill: #ff9800; }
+.vm-pin--smoking  .vm-pin-disc { fill: #8d99a6; }
+.vm-pin--exit     .vm-pin-disc { fill: #d8d8d8; }
+
+.vm-pin { transition: opacity 0.2s ease; }
+.vm-pin.is-dim { opacity: 0.4; }
+.vm-pin.is-hl .vm-pin-body,
+.vm-pin.is-sel .vm-pin-body { fill: #2a2118; stroke: #fff; stroke-width: 0.5; }
+
+/* ── Selection info panel ── */
+.vm-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+  padding: 0.85rem 1rem;
+  min-height: 56px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: border-color 0.2s;
+}
+.vm-info.is-active { border-color: rgba(255, 61, 0, 0.35); }
+.vm-info-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  background: rgba(255, 61, 0, 0.12);
+  color: #ff6b35;
+  font-size: 1.05rem;
+  flex-shrink: 0;
+}
+.vm-info-body { flex: 1; display: flex; flex-direction: column; gap: 0.1rem; }
+.vm-info-body strong { font-size: 0.9rem; color: #fff; }
+.vm-info-body span { font-size: 0.72rem; color: rgba(255, 255, 255, 0.5); }
+.vm-info-rec {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #9cb4ff;
+  background: rgba(120, 160, 255, 0.12);
+  border: 1px solid rgba(120, 160, 255, 0.3);
+  padding: 0.25rem 0.55rem;
+  white-space: nowrap;
+}
+.vm-info-hint { font-size: 0.8rem; color: rgba(255, 255, 255, 0.35); }
+
+/* ── Legend ── */
+.venue-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+  margin: 0.9rem 0 0.4rem;
+  padding: 0.7rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.venue-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.68rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+.venue-legend-pin {
+  width: 10px;
+  height: 10px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  display: inline-block;
+}
+.venue-legend-pin.venue-pin--entrance { background: #4caf50; }
+.venue-legend-pin.venue-pin--water { background: #2196f3; }
+.venue-legend-pin.venue-pin--toilet { background: #b39dff; }
+.venue-legend-pin.venue-pin--firstaid { background: #ff3d00; }
+.venue-legend-pin.venue-pin--rest { background: #ff9800; }
+.venue-legend-pin.venue-pin--smoking { background: #8d99a6; }
+.venue-legend-pin.venue-pin--exit { background: #d8d8d8; }
+
+/* ── My Venue Plan ── */
+.venue-plan { margin-top: 1rem; }
+.venue-plan-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+.venue-plan-head h3 { font-size: 0.85rem; font-weight: 800; color: #fff; }
+.venue-plan-because {
+  font-size: 0.7rem;
+  color: #9cb4ff;
+  background: rgba(120, 160, 255, 0.1);
+  border: 1px solid rgba(120, 160, 255, 0.2);
+  padding: 0.2rem 0.55rem;
+}
+
+.venue-plan-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.venue-plan-list li { list-style: none; }
+.venue-plan-item {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  color: inherit;
+  font-family: var(--font-body, sans-serif);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.venue-plan-item:hover { border-color: rgba(255, 255, 255, 0.2); }
+.venue-plan-item.is-sel {
+  border-color: #ff3d00;
+  background: rgba(255, 61, 0, 0.1);
+}
+.venue-plan-item.is-note {
+  border-color: rgba(255, 61, 0, 0.2);
+  background: rgba(255, 61, 0, 0.04);
+}
+.venue-plan-tip {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.4);
+  margin-bottom: 0.6rem;
+}
+.venue-plan-tip svg { color: #ff3d00; }
+.venue-plan-step {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 50%;
+}
+.venue-plan-icon {
+  display: flex;
+  align-items: center;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+.venue-plan-text { flex: 1; display: flex; flex-direction: column; gap: 0.1rem; }
+.venue-plan-text strong { font-size: 0.82rem; color: rgba(255, 255, 255, 0.85); font-weight: 600; }
+.venue-plan-note { font-size: 0.68rem; color: #ff8a5c; font-style: normal; }
+.venue-plan-walk { font-size: 0.72rem; color: rgba(255, 255, 255, 0.4); white-space: nowrap; }
+
+.venue-plan-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+}
+.venue-plan-hint svg { color: #ff3d00; flex-shrink: 0; }
+
+@media (max-width: 600px) {
+  .venue-map-wrap { aspect-ratio: 1 / 1; }
+  .vm-zone-label { font-size: 4px; }
+  .vm-zone-label.is-stage { font-size: 4.2px; }
+}

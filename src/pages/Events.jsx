@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { getEvents, getGoingCount } from '../lib/db'
+import { getEvents, getGoingCount, getTicketsByUser, getUserSubscriptions } from '../lib/db'
 import { useAuth } from '../context/AuthContext'
-import { FiMapPin, FiSearch, FiArrowRight, FiEye } from 'react-icons/fi'
+import { buildUserProfile, getRecommendations } from '../lib/ai/recommendations'
+import { FiMapPin, FiSearch, FiArrowRight, FiEye, FiZap } from 'react-icons/fi'
 import Button from '../components/ui/Button'
 import { EventCardSkeleton } from '../components/ui/Skeleton'
 import './Events.css'
@@ -14,15 +15,48 @@ const Events = () => {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [activeGenre, setActiveGenre] = useState('all')
+  const [goingCounts, setGoingCounts] = useState({})
+  const [recommendations, setRecommendations] = useState([])
 
   useEffect(() => {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const data = getEvents().filter(e => new Date(e.date) >= today)
-    setEvents(data)
-    setFilteredEvents(data)
-    setLoading(false)
+    const loadEvents = async () => {
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const data = (await getEvents()).filter(e => new Date(e.date) >= today)
+      setEvents(data)
+      setFilteredEvents(data)
+
+      // Load going counts
+      const counts = {}
+      for (const e of data) {
+        counts[e.id] = await getGoingCount(e.id)
+      }
+      setGoingCounts(counts)
+      setLoading(false)
+    }
+    loadEvents()
   }, [])
+
+  // AI Recommendations
+  useEffect(() => {
+    const loadRecs = async () => {
+      if (!userProfile || events.length === 0) return
+      try {
+        const userTickets = await getTicketsByUser(userProfile.id)
+        const userSubs = await getUserSubscriptions(userProfile.id)
+        const goingAsTickets = userSubs.map(s => ({ eventId: s.eventId })) // treat subs as "interest"
+        const profile = buildUserProfile(userTickets, goingAsTickets, events)
+        if (profile) {
+          const excludeIds = userTickets.map(t => t.eventId)
+          const recs = getRecommendations(profile, events, excludeIds, 4)
+          setRecommendations(recs.filter(r => r.score > 0.3))
+        }
+      } catch (err) {
+        console.error('Recommendations error:', err)
+      }
+    }
+    loadRecs()
+  }, [userProfile, events])
 
   useEffect(() => {
     let f = events
@@ -89,6 +123,31 @@ const Events = () => {
           {filteredEvents.length} {filteredEvents.length === 1 ? 'evento' : 'eventos'}
         </div>
 
+        {/* AI Recommendations */}
+        {recommendations.length > 0 && searchTerm === '' && activeGenre === 'all' && (
+          <div className="events-recs">
+            <div className="events-recs-header">
+              <h2><FiZap /> Recomendados para ti</h2>
+              <span className="events-recs-badge">AI</span>
+            </div>
+            <div className="events-recs-grid">
+              {recommendations.map(event => (
+                <Link to={`/event/${event.id}`} key={event.id} className="events-rec-card">
+                  <img src={event.imageUrl || 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=400'} alt="" />
+                  <div className="events-rec-info">
+                    <h4>{event.title}</h4>
+                    <span>{new Date(event.date).toLocaleDateString('es', { day: 'numeric', month: 'short' })} · {event.location}</span>
+                    <div className="events-rec-reasons">
+                      {event.reasons.map((r, i) => <span key={i} className="events-rec-reason">{r}</span>)}
+                    </div>
+                  </div>
+                  <div className="events-rec-score">{Math.round(event.score * 100)}%</div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Grid */}
         <div className="events-grid">
           {filteredEvents.map((event, i) => (
@@ -113,7 +172,7 @@ const Events = () => {
                   <h3>{event.title}</h3>
                   <p className="event-card-location"><FiMapPin /> {event.location}</p>
                   {event.time && <p className="event-card-time">{event.time}h</p>}
-                  {getGoingCount(event.id) > 0 && <p className="event-card-going">🎉 {getGoingCount(event.id)} van</p>}
+                  {goingCounts[event.id] > 0 && <p className="event-card-going">🎉 {goingCounts[event.id]} van</p>}
                 </div>
                 <div className="event-card-price">
                   {event.price === 0 ? 'Gratis' : `$${event.price}`}

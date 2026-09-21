@@ -18,17 +18,21 @@ const TicketDetail = () => {
   const [organizer, setOrganizer] = useState(null)
 
   useEffect(() => {
-    const t = getTicket(id)
-    if (t) {
-      setTicket(t)
-      const e = getEvent(t.eventId)
-      setEvent(e)
-      if (e) setOrganizer(getUser(e.organizerId))
+    const load = async () => {
+      const t = await getTicket(id)
+      if (t) {
+        setTicket(t)
+        const e = await getEvent(t.eventId)
+        setEvent(e)
+        if (e) setOrganizer(await getUser(e.organizerId))
+      }
     }
+    load()
   }, [id])
 
-  const handleCancel = () => {
-    if (cancelTicket(id)) {
+  const handleCancel = async () => {
+    const success = await cancelTicket(id)
+    if (success) {
       toast.success('Ticket cancelado y reembolsado')
       navigate('/my-tickets')
     } else {

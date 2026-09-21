@@ -1,0 +1,124 @@
+/* ═══════════════════════════════════════════
+   Comfort & Accessibility Profile
+   Personalization with agency — opt-in, editable
+   ═══════════════════════════════════════════ */
+
+.comfort {
+  background: #111;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 1.5rem;
+}
+
+.comfort--compact {
+  padding: 1.15rem;
+}
+
+.comfort-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.comfort-title {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: 0.01em;
+}
+
+.comfort-sub {
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.45);
+  margin-top: 0.4rem;
+  max-width: 60ch;
+}
+
+.comfort-saved {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #4caf50;
+  background: rgba(76, 175, 80, 0.1);
+  border: 1px solid rgba(76, 175, 80, 0.2);
+  padding: 0.3rem 0.6rem;
+  white-space: nowrap;
+}
+
+.comfort-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.6rem;
+}
+
+.comfort-pref {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.85rem 0.9rem;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  transition: all 0.18s ease;
+}
+
+.comfort-pref:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+.comfort-pref.is-on {
+  background: rgba(255, 61, 0, 0.08);
+  border-color: rgba(255, 61, 0, 0.4);
+  color: #fff;
+}
+
+.comfort-pref-icon {
+  display: flex;
+  align-items: center;
+  font-size: 1.15rem;
+  color: rgba(255, 255, 255, 0.5);
+  flex-shrink: 0;
+}
+
+.comfort-pref.is-on .comfort-pref-icon {
+  color: #ff6b35;
+}
+
+.comfort-pref-label {
+  flex: 1;
+  line-height: 1.35;
+}
+
+.comfort-pref-check {
+  display: flex;
+  align-items: center;
+  color: #ff3d00;
+  flex-shrink: 0;
+}
+
+.comfort-agency {
+  margin-top: 1.1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+@media (max-width: 600px) {
+  .comfort-grid {
+    grid-template-columns: 1fr;
+  }
+  .comfort-head {
+    flex-direction: column;
+  }
+}

@@ -1,0 +1,401 @@
+/* ═══════════════════════════════════════════
+   AI Components — Shared Styles
+   ═══════════════════════════════════════════ */
+
+.ai-section {
+  background: #111;
+  border: 1px solid rgba(255,255,255,0.06);
+  padding: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.ai-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+}
+
+.ai-section-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  letter-spacing: 0.03em;
+}
+
+.ai-badge {
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  padding: 0.25rem 0.6rem;
+  background: rgba(255,61,0,0.1);
+  color: #ff3d00;
+  border: 1px solid rgba(255,61,0,0.2);
+}
+
+.ai-loading {
+  color: rgba(255,255,255,0.4);
+  font-size: 0.85rem;
+  text-align: center;
+  padding: 2rem;
+}
+
+.ai-subsection-title {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: rgba(255,255,255,0.4);
+  margin-bottom: 0.75rem;
+}
+
+/* ── Spotify Lineup ── */
+.ai-style-profile {
+  background: rgba(255,255,255,0.02);
+  padding: 1rem;
+  margin-bottom: 1.25rem;
+  border: 1px solid rgba(255,255,255,0.04);
+}
+
+.ai-style-moods {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+
+.ai-mood-tag {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.2rem 0.6rem;
+  background: rgba(255,61,0,0.15);
+  color: #ff6b35;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.ai-style-genres {
+  display: flex;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+
+.ai-genre-pill {
+  font-size: 0.65rem;
+  padding: 0.15rem 0.5rem;
+  background: rgba(255,255,255,0.05);
+  color: rgba(255,255,255,0.5);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.ai-style-meta {
+  font-size: 0.7rem;
+  color: rgba(255,255,255,0.3);
+  display: flex;
+  gap: 0.5rem;
+}
+
+.ai-artists-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.ai-artist-card {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.05);
+  padding: 1rem;
+}
+
+.ai-artist-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.ai-artist-img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.ai-artist-info { flex: 1; }
+.ai-artist-info h4 { font-size: 0.85rem; color: #fff; font-weight: 600; }
+.ai-artist-genres { font-size: 0.7rem; color: rgba(255,255,255,0.35); }
+
+.ai-spotify-link {
+  color: rgba(255,255,255,0.3);
+  transition: color 0.2s;
+}
+.ai-spotify-link:hover { color: #1db954; }
+
+.ai-tracks {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.ai-track {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.4rem 0;
+}
+
+.ai-track-play {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.7rem;
+  transition: all 0.2s;
+}
+.ai-track-play:hover:not(:disabled) { background: #ff3d00; border-color: #ff3d00; }
+.ai-track-play:disabled { opacity: 0.3; cursor: default; }
+
+.ai-track-info { flex: 1; overflow: hidden; }
+.ai-track-name { display: block; font-size: 0.78rem; color: rgba(255,255,255,0.7); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ai-track-album { display: block; font-size: 0.65rem; color: rgba(255,255,255,0.25); }
+
+.ai-show-more {
+  margin-top: 1rem;
+  background: none;
+  border: 1px solid rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.5);
+  padding: 0.6rem 1.25rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+  width: 100%;
+  font-family: var(--font-body);
+  transition: all 0.2s;
+}
+.ai-show-more:hover { color: #fff; border-color: rgba(255,255,255,0.3); }
+
+/* ── Dynamic Pricing ── */
+.ai-pricing-main {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background: rgba(255,255,255,0.02);
+}
+
+.ai-pricing-current, .ai-pricing-suggested { text-align: center; flex: 1; }
+.ai-pricing-label { display: block; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(255,255,255,0.35); margin-bottom: 0.25rem; }
+.ai-pricing-value { display: block; font-size: 1.8rem; font-weight: 900; color: #fff; }
+.ai-pricing-arrow { color: rgba(255,255,255,0.2); font-size: 1.2rem; }
+.ai-pricing-change { display: block; font-size: 0.75rem; font-weight: 600; margin-top: 0.15rem; }
+.ai-pricing-change.up { color: #4caf50; }
+.ai-pricing-change.down { color: #ff3d00; }
+
+.ai-tier-badge {
+  padding: 0.5rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 1rem;
+}
+.ai-tier-premium { background: rgba(255,61,0,0.1); color: #ff3d00; border: 1px solid rgba(255,61,0,0.2); }
+.ai-tier-high-demand { background: rgba(255,152,0,0.1); color: #ff9800; border: 1px solid rgba(255,152,0,0.2); }
+.ai-tier-normal { background: rgba(76,175,80,0.1); color: #4caf50; border: 1px solid rgba(76,175,80,0.2); }
+.ai-tier-early-bird { background: rgba(33,150,243,0.1); color: #2196f3; border: 1px solid rgba(33,150,243,0.2); }
+
+.ai-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.ai-metric-card {
+  text-align: center;
+  padding: 0.75rem 0.5rem;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.04);
+}
+
+.ai-metric-value { display: block; font-size: 1.2rem; font-weight: 800; color: #fff; }
+.ai-metric-label { display: block; font-size: 0.6rem; color: rgba(255,255,255,0.35); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 0.2rem; }
+
+.ai-multipliers {
+  font-size: 0.7rem;
+  color: rgba(255,255,255,0.4);
+  padding: 0.5rem 0;
+  margin-bottom: 1rem;
+}
+.ai-mult-title { font-weight: 600; margin-right: 0.5rem; }
+.ai-mult-list { display: flex; gap: 1rem; margin-top: 0.25rem; }
+
+.ai-forecast {
+  background: rgba(255,255,255,0.02);
+  padding: 1rem;
+  border: 1px solid rgba(255,255,255,0.04);
+}
+
+.ai-forecast-title { font-size: 0.75rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.75rem; }
+
+.ai-forecast-stats { display: flex; gap: 1.5rem; margin-bottom: 1rem; }
+.ai-forecast-big { display: block; font-size: 1.3rem; font-weight: 800; color: #fff; }
+.ai-forecast-label { font-size: 0.6rem; color: rgba(255,255,255,0.35); text-transform: uppercase; }
+
+.ai-forecast-sellout {
+  display: flex; align-items: center; gap: 0.5rem;
+  font-size: 0.75rem; color: #ff9800; margin-bottom: 0.75rem;
+  padding: 0.5rem; background: rgba(255,152,0,0.08);
+}
+
+.ai-forecast-bar { height: 8px; background: rgba(255,255,255,0.06); position: relative; overflow: hidden; margin-bottom: 0.5rem; }
+.ai-forecast-bar-fill { height: 100%; background: rgba(76,175,80,0.3); position: absolute; top: 0; left: 0; transition: width 0.5s; }
+.ai-forecast-bar-current { height: 100%; background: #4caf50; position: absolute; top: 0; left: 0; transition: width 0.5s; }
+
+.ai-forecast-legend { display: flex; gap: 1rem; font-size: 0.65rem; color: rgba(255,255,255,0.4); }
+.ai-dot { display: inline-block; width: 8px; height: 8px; margin-right: 0.3rem; }
+.ai-dot-current { background: #4caf50; }
+.ai-dot-projected { background: rgba(76,175,80,0.3); }
+.ai-confidence { font-size: 0.6rem; color: rgba(255,255,255,0.25); margin-top: 0.5rem; display: block; }
+
+.ai-recommendation {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.75rem;
+  margin-top: 1rem;
+  background: rgba(255,61,0,0.05);
+  border: 1px solid rgba(255,61,0,0.1);
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.6);
+  line-height: 1.5;
+}
+.ai-recommendation svg { color: #ff3d00; flex-shrink: 0; margin-top: 0.1rem; }
+
+/* ── Sentiment Panel ── */
+.ai-sentiment-overview {
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+  margin-bottom: 1.25rem;
+}
+
+.ai-sentiment-score {
+  text-align: center;
+  padding: 1rem;
+  border: 2px solid;
+  min-width: 80px;
+}
+.ai-sentiment-value { display: block; font-size: 1.5rem; font-weight: 900; }
+.ai-sentiment-label { font-size: 0.6rem; text-transform: uppercase; color: rgba(255,255,255,0.4); letter-spacing: 0.1em; }
+
+.ai-sentiment-breakdown { flex: 1; }
+.ai-sentiment-bar-row { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem; font-size: 0.75rem; color: rgba(255,255,255,0.5); }
+.ai-sentiment-bar-row span:first-child { width: 80px; }
+.ai-sentiment-bar-row span:last-child { width: 20px; text-align: right; font-weight: 600; color: #fff; }
+.ai-sentiment-bar { flex: 1; height: 6px; background: rgba(255,255,255,0.06); overflow: hidden; }
+.ai-sentiment-bar div { height: 100%; transition: width 0.3s; }
+
+.ai-aspects-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.ai-aspect-card {
+  padding: 0.75rem;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.05);
+}
+.ai-aspect-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem; }
+.ai-aspect-name { font-size: 0.75rem; color: rgba(255,255,255,0.6); }
+.ai-aspect-score { font-size: 0.9rem; }
+.ai-aspect-bar { height: 4px; background: rgba(255,255,255,0.06); display: flex; overflow: hidden; margin-bottom: 0.25rem; }
+.ai-aspect-pos { height: 100%; background: #4caf50; }
+.ai-aspect-neg { height: 100%; background: #ff3d00; }
+.ai-aspect-mentions { font-size: 0.6rem; color: rgba(255,255,255,0.25); }
+
+.ai-keywords { margin-bottom: 1rem; }
+.ai-keyword-group { margin-bottom: 0.5rem; }
+.ai-keyword-label { font-size: 0.7rem; color: rgba(255,255,255,0.4); display: block; margin-bottom: 0.3rem; }
+.ai-keyword-tags { display: flex; gap: 0.3rem; flex-wrap: wrap; }
+.ai-keyword-tag { font-size: 0.65rem; padding: 0.15rem 0.5rem; }
+.ai-keyword-tag.positive { background: rgba(76,175,80,0.1); color: #4caf50; }
+.ai-keyword-tag.negative { background: rgba(255,61,0,0.1); color: #ff3d00; }
+
+.ai-insights { display: flex; flex-direction: column; gap: 0.5rem; }
+.ai-insight {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+.ai-insight svg { flex-shrink: 0; margin-top: 0.1rem; }
+.ai-insight-success { background: rgba(76,175,80,0.06); color: rgba(255,255,255,0.6); }
+.ai-insight-success svg { color: #4caf50; }
+.ai-insight-warning { background: rgba(255,152,0,0.06); color: rgba(255,255,255,0.6); }
+.ai-insight-warning svg { color: #ff9800; }
+.ai-insight-alert { background: rgba(255,61,0,0.06); color: rgba(255,255,255,0.6); }
+.ai-insight-alert svg { color: #ff3d00; }
+.ai-insight-info { background: rgba(33,150,243,0.06); color: rgba(255,255,255,0.6); }
+.ai-insight-info svg { color: #2196f3; }
+
+/* ── Fraud Detection ── */
+.ai-fraud-summary {
+  border-left: 3px solid;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  font-size: 0.85rem;
+  color: rgba(255,255,255,0.6);
+  background: rgba(255,255,255,0.02);
+}
+
+.ai-fraud-alerts { margin-top: 1rem; }
+.ai-fraud-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.6rem 0.75rem;
+  margin-bottom: 0.4rem;
+  font-size: 0.78rem;
+}
+.ai-fraud-high { background: rgba(255,61,0,0.06); }
+.ai-fraud-high svg { color: #ff3d00; }
+.ai-fraud-medium { background: rgba(255,152,0,0.06); }
+.ai-fraud-medium svg { color: #ff9800; }
+.ai-fraud-low { background: rgba(33,150,243,0.06); }
+
+.ai-fraud-alert-type { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(255,255,255,0.3); display: block; }
+.ai-fraud-alert p { color: rgba(255,255,255,0.6); margin-top: 0.1rem; }
+
+.ai-fraud-clean {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1.5rem;
+  text-align: center;
+  justify-content: center;
+  color: #4caf50;
+  font-size: 0.85rem;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .ai-metrics-grid { grid-template-columns: repeat(2, 1fr); }
+  .ai-sentiment-overview { flex-direction: column; }
+  .ai-pricing-main { flex-direction: column; gap: 0.75rem; }
+  .ai-pricing-arrow { transform: rotate(90deg); }
+  .ai-forecast-stats { flex-direction: column; gap: 0.5rem; }
+  .ai-aspects-grid { grid-template-columns: 1fr; }
+}

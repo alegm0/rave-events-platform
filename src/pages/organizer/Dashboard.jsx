@@ -14,22 +14,26 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (!currentUser) return
-    const evts = getEventsByOrganizer(currentUser.id)
-    setEvents(evts)
-    let rev = 0, tix = 0
-    const enriched = evts.map(e => {
-      const t = getTicketsByEvent(e.id)
-      tix += t.length
-      rev += t.length * (e.price || 0)
-      return { ...e, tickets: t.length, revenue: t.length * (e.price || 0), pct: e.capacity ? Math.round((t.length / e.capacity) * 100) : 0 }
-    })
-    setEventsWithTickets(enriched)
-    setStats({
-      totalEvents: evts.length,
-      totalRevenue: rev,
-      totalTickets: tix,
-      upcoming: evts.filter(e => new Date(e.date) > new Date()).length
-    })
+    const load = async () => {
+      const evts = await getEventsByOrganizer(currentUser.id)
+      setEvents(evts)
+      let rev = 0, tix = 0
+      const enriched = []
+      for (const e of evts) {
+        const t = await getTicketsByEvent(e.id)
+        tix += t.length
+        rev += t.length * (e.price || 0)
+        enriched.push({ ...e, tickets: t.length, revenue: t.length * (e.price || 0), pct: e.capacity ? Math.round((t.length / e.capacity) * 100) : 0 })
+      }
+      setEventsWithTickets(enriched)
+      setStats({
+        totalEvents: evts.length,
+        totalRevenue: rev,
+        totalTickets: tix,
+        upcoming: evts.filter(e => new Date(e.date) > new Date()).length
+      })
+    }
+    load()
   }, [currentUser])
 
   const hasEvents = events.length > 0

@@ -19,18 +19,22 @@ const Calendar = () => {
     loadEvents()
   }, [currentUser, mode])
 
-  const loadEvents = () => {
+  const loadEvents = async () => {
     if (mode === 'mine' && currentUser) {
       const isOrg = userProfile?.role === 'organizer'
       if (isOrg) {
-        setEvents(getEventsByOrganizer(currentUser.id))
+        setEvents(await getEventsByOrganizer(currentUser.id))
       } else {
-        const tickets = getTicketsByUser(currentUser.id)
-        const myEvents = tickets.map(t => getEvent(t.eventId)).filter(Boolean)
+        const tickets = await getTicketsByUser(currentUser.id)
+        const myEvents = []
+        for (const t of tickets) {
+          const ev = await getEvent(t.eventId)
+          if (ev) myEvents.push(ev)
+        }
         setEvents(myEvents)
       }
     } else {
-      setEvents(getEvents())
+      setEvents(await getEvents())
     }
   }
 

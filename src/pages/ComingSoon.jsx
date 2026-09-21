@@ -54,17 +54,22 @@ const ComingSoon = () => {
 
   useEffect(() => {
     if (!currentUser) return
-    const subs = {}
-    events.forEach(e => { subs[e.id] = isSubscribed(currentUser.id, e.id) })
-    setSubscribed(subs)
+    const load = async () => {
+      const subs = {}
+      for (const e of events) {
+        subs[e.id] = await isSubscribed(currentUser.id, e.id)
+      }
+      setSubscribed(subs)
+    }
+    load()
   }, [currentUser, events])
 
-  const handleNotify = (event) => {
+  const handleNotify = async (event) => {
     if (!currentUser) { navigate('/login'); return }
     if (subscribed[event.id]) return
 
-    subscribe(currentUser.id, event.id)
-    addNotification(currentUser.id, {
+    await subscribe(currentUser.id, event.id)
+    await addNotification(currentUser.id, {
       type: 'subscription',
       title: `Te suscribiste a ${event.title}`,
       message: `Te notificaremos cuando ${event.title} esté disponible para compra.`,

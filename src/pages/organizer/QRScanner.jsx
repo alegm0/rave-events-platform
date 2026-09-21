@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { validateTicket, getEvent, getTicketsByEvent } from '../../lib/db'
+import { useAuth } from '../../context/AuthContext'
 import { FiCheckCircle, FiXCircle, FiCamera, FiType, FiUsers, FiArrowLeft } from 'react-icons/fi'
 import Button from '../../components/ui/Button'
 import { useToast } from '../../components/ui/Toast'
@@ -8,31 +9,51 @@ import './QRScanner.css'
 
 const QRScanner = () => {
   const { eventId } = useParams()
+  const navigate = useNavigate()
+  const { currentUser } = useAuth()
   const toast = useToast()
+  const [denied, setDenied] = useState(false)
   const [mode, setMode] = useState('camera') // 'camera' or 'manual'
   const [manualCode, setManualCode] = useState('')
   const [result, setResult] = useState(null)
   const [scanCount, setScanCount] = useState(0)
   const [event, setEvent] = useState(null)
   const [stats, setStats] = useState({ total: 0, checkedIn: 0 })
+  const [cameraError, setCameraError] = useState(null)
   const videoRef = useRef(null)
   const streamRef = useRef(null)
+  const canvasRef = useRef(null)
+  const scanIntervalRef = useRef(null)
+  const isProcessingRef = useRef(false)
 
   useEffect(() => {
-    const e = getEvent(eventId)
-    setEvent(e)
-    refreshStats()
-    return () => stopCamera()
-  }, [eventId])
+    const load = async () => {
+      const e = await getEvent(eventId)
+      // Authorization by ownership: only the event's organizer may scan it
+      if (e && currentUser && e.organizerId !== currentUser.id) {
+        setDenied(true)
+        return
+      }
+      setEvent(e)
+      await refreshStats()
+    }
+    load()
+    return () => { stopCamera(); stopScanning() }
+  }, [eventId, currentUser])
 
   useEffect(() => {
-    if (mode === 'camera') startCamera()
-    else stopCamera()
-    return () => stopCamera()
+    if (mode === 'camera') {
+      setCameraError(null)
+      startCamera()
+    } else {
+      stopCamera()
+      stopScanning()
+    }
+    return () => { stopCamera(); stopScanning() }
   }, [mode])
 
-  const refreshStats = () => {
-    const tickets = getTicketsByEvent(eventId)
+  const refreshStats = async () => {
+    const tickets = await getTicketsByEvent(eventId)
     setStats({
       total: tickets.length,
       checkedIn: tickets.filter(t => t.status === 'used').length,
@@ -48,9 +69,14 @@ const QRScanner = () => {
       if (videoRef.current) {
         videoRef.current.srcObject = stream
         videoRef.current.play()
+        // Start scanning once video is playing
+        videoRef.current.onloadedmetadata = () => {
+          startScanning()
+        }
       }
     } catch (err) {
       console.warn('Cámara no disponible:', err)
+      setCameraError('No se pudo acceder a la cámara. Usa el modo manual.')
       setMode('manual')
     }
   }
@@ -62,13 +88,56 @@ const QRScanner = () => {
     }
   }
 
-  const handleValidate = (code) => {
+  // QR Code detection using BarcodeDetector API (available in Chrome, Edge, Opera)
+  // Falls back to canvas-based frame capture for manual analysis
+  const startScanning = () => {
+    if (scanIntervalRef.current) return
+
+    // Try BarcodeDetector API first (native, no library needed)
+    if ('BarcodeDetector' in window) {
+      const detector = new BarcodeDetector({ formats: ['qr_code'] })
+      scanIntervalRef.current = setInterval(async () => {
+        if (isProcessingRef.current || !videoRef.current || videoRef.current.readyState < 2) return
+        try {
+          const barcodes = await detector.detect(videoRef.current)
+          if (barcodes.length > 0) {
+            const code = barcodes[0].rawValue
+            if (code) {
+              isProcessingRef.current = true
+              await handleValidate(code)
+              // Pause scanning for 3 seconds after a read
+              setTimeout(() => { isProcessingRef.current = false }, 3000)
+            }
+          }
+        } catch (e) {
+          // Detection error, continue scanning
+        }
+      }, 250) // Scan 4 times per second
+    } else {
+      // Fallback: capture frames to canvas for visual feedback
+      // Without BarcodeDetector, camera mode shows the feed but user needs manual entry
+      // Show a hint that this browser doesn't support auto-scan
+      setCameraError('Tu navegador no soporta escaneo automático. Usa Chrome o ingresa el código manualmente.')
+    }
+  }
+
+  const stopScanning = () => {
+    if (scanIntervalRef.current) {
+      clearInterval(scanIntervalRef.current)
+      scanIntervalRef.current = null
+    }
+  }
+
+  const handleValidate = async (code) => {
     if (!code.trim()) return
-    const res = validateTicket(code.trim(), eventId)
+    const res = await validateTicket(code.trim(), eventId)
     setResult(res)
     setScanCount(c => c + (res.success ? 1 : 0))
-    refreshStats()
+    await refreshStats()
     setManualCode('')
+
+    if (res.success) toast.success('¡Entrada validada!')
+    else toast.error(res.message)
 
     // Auto-clear result after 3 seconds
     setTimeout(() => setResult(null), 3000)
@@ -77,6 +146,23 @@ const QRScanner = () => {
   const handleManualSubmit = (e) => {
     e.preventDefault()
     handleValidate(manualCode)
+  }
+
+  if (denied) {
+    return (
+      <div className="scanner-page">
+        <div className="container" style={{ padding: '4rem 1rem', textAlign: 'center' }}>
+          <FiXCircle size={48} style={{ color: '#ff3d00' }} />
+          <h1 style={{ color: '#fff', marginTop: '1rem' }}>Acceso denegado</h1>
+          <p style={{ color: 'rgba(255,255,255,0.5)', marginTop: '0.5rem' }}>
+            Solo el organizador de este evento puede validar sus entradas.
+          </p>
+          <div style={{ marginTop: '1.5rem' }}>
+            <Button onClick={() => navigate('/organizer/dashboard')}>Volver al dashboard</Button>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -129,12 +215,20 @@ const QRScanner = () => {
                   </div>
                   <div className="scanner-scan-line"></div>
                 </div>
-                <p className="scanner-camera-hint">
-                  Apunta la cámara al código QR del raver
-                </p>
-                <p className="scanner-camera-sub">
-                  Si la cámara no funciona, usa el modo manual
-                </p>
+                {cameraError ? (
+                  <p className="scanner-camera-hint" style={{ color: '#ff9800' }}>
+                    {cameraError}
+                  </p>
+                ) : (
+                  <>
+                    <p className="scanner-camera-hint">
+                      Apunta la cámara al código QR del raver
+                    </p>
+                    <p className="scanner-camera-sub">
+                      El escaneo es automático · Si no funciona, usa el modo manual
+                    </p>
+                  </>
+                )}
               </div>
             ) : (
               <div className="scanner-manual-area">

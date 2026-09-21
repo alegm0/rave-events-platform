@@ -54,7 +54,7 @@ const Register = () => {
       toast.success('¡Cuenta creada exitosamente!')
       navigate(formData.role === 'organizer' ? '/organizer/dashboard' : '/events')
     } catch (error) {
-      setError('Error al crear la cuenta. El correo puede estar en uso.')
+      setError(error.message || 'Error al crear la cuenta. El correo puede estar en uso.')
       console.error(error)
     } finally {
       setLoading(false)

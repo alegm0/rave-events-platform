@@ -12,13 +12,22 @@ const Navbar = () => {
   const [scrolled, setScrolled] = useState(false)
   const [showNotifs, setShowNotifs] = useState(false)
   const [showSearch, setShowSearch] = useState(false)
+  const [unread, setUnread] = useState(0)
+  const [notifications, setNotifications] = useState([])
   const { currentUser, userProfile, logout } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const isOrg = userProfile?.role === 'organizer'
 
-  const unread = currentUser ? getUnreadCount(currentUser.id) : 0
-  const notifications = currentUser ? getNotifications(currentUser.id).slice(0, 8) : []
+  useEffect(() => {
+    const loadNotifs = async () => {
+      if (currentUser) {
+        setUnread(await getUnreadCount(currentUser.id))
+        setNotifications((await getNotifications(currentUser.id)).slice(0, 8))
+      }
+    }
+    loadNotifs()
+  }, [currentUser, location])
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 30)
@@ -39,10 +48,11 @@ const Navbar = () => {
     try { await logout(); navigate('/') } catch (e) { console.error(e) }
   }
 
-  const handleBellClick = () => {
+  const handleBellClick = async () => {
     setShowNotifs(!showNotifs)
     if (!showNotifs && currentUser && unread > 0) {
-      markAllRead(currentUser.id)
+      await markAllRead(currentUser.id)
+      setUnread(0)
     }
   }
 

@@ -9,6 +9,15 @@ export default defineConfig({
     strictPort: false,
     hmr: {
       overlay: true
+    },
+    proxy: {
+      // Deezer public API blocks browser CORS — proxy it in dev
+      '/deezer': {
+        target: 'https://api.deezer.com',
+        changeOrigin: true,
+        secure: true,
+        rewrite: (path) => path.replace(/^\/deezer/, '')
+      }
     }
   },
   optimizeDeps: {

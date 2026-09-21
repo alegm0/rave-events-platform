@@ -4,8 +4,12 @@ import { getEvent, getEvents, createTicket, getTicketsByEvent, getUser, getTicke
 import { useAuth } from '../context/AuthContext'
 import { FiCalendar, FiMapPin, FiClock, FiUsers, FiArrowLeft, FiShare2, FiCheck, FiMusic, FiArrowRight } from 'react-icons/fi'
 import Button from '../components/ui/Button'
-import Modal from '../components/ui/Modal'
+import CheckoutModal from '../components/ui/CheckoutModal'
 import { useToast } from '../components/ui/Toast'
+import SpotifyLineup from '../components/ai/SpotifyLineup'
+import VenueMap from '../components/venue/VenueMap'
+import PreRaveBrief from '../components/venue/PreRaveBrief'
+import RaveCompanion from '../components/venue/RaveCompanion'
 import './EventDetail.css'
 
 const EventDetail = () => {
@@ -30,50 +34,57 @@ const EventDetail = () => {
   const [reviewRating, setReviewRating] = useState(5)
 
   useEffect(() => {
-    const e = getEvent(id)
-    setEvent(e)
-    if (e) {
-      setTickets(getTicketsByEvent(id))
-      const all = getEvents().filter(ev => ev.id !== id && ev.genre === e.genre).slice(0, 3)
-      setRelatedEvents(all)
-      // Check if user already owns a ticket
-      if (currentUser) {
-        const userTix = getTicketsByUser(currentUser.id)
-        setAlreadyOwned(userTix.some(t => t.eventId === id))
-        setUserGoing(isGoing(currentUser.id, id))
+    const load = async () => {
+      const e = await getEvent(id)
+      setEvent(e)
+      if (e) {
+        setTickets(await getTicketsByEvent(id))
+        const all = (await getEvents()).filter(ev => ev.id !== id && ev.genre === e.genre).slice(0, 3)
+        setRelatedEvents(all)
+        // Check if user already owns a ticket
+        if (currentUser) {
+          const userTix = await getTicketsByUser(currentUser.id)
+          setAlreadyOwned(userTix.some(t => t.eventId === id))
+          setUserGoing(await isGoing(currentUser.id, id))
+        }
+        setReviews(await getReviewsByEvent(id))
+        setAvgRating(await getAverageRating(id))
+        setGoingCount(await getGoingCount(id))
+        setGoingUsers((await getGoingUsers(id)).slice(0, 5))
       }
-      setReviews(getReviewsByEvent(id))
-      setAvgRating(getAverageRating(id))
-      setGoingCount(getGoingCount(id))
-      setGoingUsers(getGoingUsers(id).slice(0, 5))
+      window.scrollTo(0, 0)
     }
-    window.scrollTo(0, 0)
+    load()
   }, [id])
 
-  const organizer = event ? getUser(event.organizerId) : null
+  const [organizer, setOrganizer] = useState(null)
+  useEffect(() => {
+    const loadOrg = async () => {
+      if (event) setOrganizer(await getUser(event.organizerId))
+    }
+    loadOrg()
+  }, [event])
 
   const handlePurchase = () => {
     if (!currentUser) { navigate('/login'); return }
     setShowConfirm(true)
   }
 
-  const confirmPurchase = () => {
-    setShowConfirm(false)
-    setPurchasing(true)
-    try {
-      createTicket({ eventId: id, userId: currentUser.id })
-      markGoing(currentUser.id, id)
-      addNotification(currentUser.id, {
-        type: 'purchase',
-        title: `Ticket comprado: ${event.title}`,
-        message: `Tu entrada para ${event.title} está lista. Revisa tu QR en Mis Tickets.`,
-        eventId: id,
-        image: event.imageUrl,
-      })
-      setPurchased(true)
-      toast.success('¡Ticket comprado exitosamente!')
-    } catch (e) { toast.error('Error al comprar el ticket'); console.error(e) }
-    finally { setPurchasing(false) }
+  // Called by the checkout modal after a (simulated) successful payment.
+  // Throws propagate so the modal can show duplicate / sold-out errors.
+  const completePurchase = async () => {
+    await createTicket({ eventId: id, userId: currentUser.id })
+    await markGoing(currentUser.id, id)
+    await addNotification(currentUser.id, {
+      type: 'purchase',
+      title: `Ticket comprado: ${event.title}`,
+      message: `Tu entrada para ${event.title} está lista. Revisa tu QR en Mis Tickets.`,
+      eventId: id,
+      image: event.imageUrl,
+    })
+    setPurchased(true)
+    setAlreadyOwned(true)
+    toast.success('¡Ticket comprado exitosamente!')
   }
 
   const handleShare = () => {
@@ -197,7 +208,7 @@ const EventDetail = () => {
 
             {/* Lineup */}
             {event.lineup && event.lineup.length > 0 && (
-              <div className="ed-section">
+              <div className="ed-section" id="ed-lineup-section">
                 <h2 className="ed-section-title"><FiMusic /> Line-up</h2>
                 <div className="ed-lineup">
                   {event.lineup.map((artist, i) => {
@@ -212,6 +223,32 @@ const EventDetail = () => {
                     )
                   })}
                 </div>
+                {/* AI-Curated Playlist & Style Fingerprint */}
+                <SpotifyLineup lineup={event.lineup} />
+              </div>
+            )}
+
+            {/* AI Pre-Rave Brief */}
+            {event.venue && (
+              <div className="ed-section">
+                <PreRaveBrief
+                  event={event}
+                  onMeetLineup={() => document.getElementById('ed-lineup-section')?.scrollIntoView({ behavior: 'smooth' })}
+                />
+              </div>
+            )}
+
+            {/* Venue Experience Map */}
+            {event.venue && (
+              <div className="ed-section">
+                {alreadyOwned && (
+                  <button className="ed-ravemode-btn" onClick={() => navigate(`/rave-mode/${id}`)}>
+                    <span className="ed-ravemode-pulse" />
+                    Entrar a Rave Mode
+                    <small>Vista simplificada para dentro del evento</small>
+                  </button>
+                )}
+                <VenueMap venue={event.venue} />
               </div>
             )}
 
@@ -267,10 +304,10 @@ const EventDetail = () => {
                     <input type="text" value={reviewText} onChange={e => setReviewText(e.target.value)}
                       placeholder="¿Cómo estuvo el evento?"
                       style={{ flex: 1, padding: '0.75rem', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: '0.85rem', fontFamily: 'var(--font-body)' }} />
-                    <Button size="sm" onClick={() => {
+                    <Button size="sm" onClick={async () => {
                       if (!reviewText.trim()) return
-                      const r = addReview({ eventId: id, userId: currentUser.id, rating: reviewRating, text: reviewText, userName: currentUser.displayName })
-                      if (r) { setReviews(prev => [r, ...prev]); setReviewText(''); setAvgRating(getAverageRating(id)); toast.success('Review publicada') }
+                      const r = await addReview({ eventId: id, userId: currentUser.id, rating: reviewRating, text: reviewText, userName: currentUser.displayName })
+                      if (r) { setReviews(prev => [r, ...prev]); setReviewText(''); setAvgRating(await getAverageRating(id)); toast.success('Review publicada') }
                       else toast.warning('Ya dejaste una review')
                     }}>Publicar</Button>
                   </div>
@@ -355,21 +392,15 @@ const EventDetail = () => {
       </div>
 
       {/* Purchase confirmation modal */}
-      <Modal isOpen={showConfirm} onClose={() => setShowConfirm(false)} title="Confirmar compra" size="sm">
-        <div style={{ textAlign: 'center' }}>
-          <p style={{ color: 'rgba(255,255,255,0.6)', marginBottom: '1rem', fontSize: '0.9rem' }}>
-            ¿Confirmas la compra de tu ticket para <strong style={{ color: '#fff' }}>{event?.title}</strong>?
-          </p>
-          <div style={{ background: 'rgba(255,255,255,0.04)', padding: '1rem', marginBottom: '1.5rem' }}>
-            <div style={{ fontSize: '2rem', fontWeight: 800, color: '#fff' }}>{event?.price === 0 ? 'Gratis' : `$${event?.price}`}</div>
-            <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)' }}>Entrada General · QR Digital</div>
-          </div>
-          <div style={{ display: 'flex', gap: '0.75rem' }}>
-            <Button variant="ghost" fullWidth onClick={() => setShowConfirm(false)}>Cancelar</Button>
-            <Button fullWidth onClick={confirmPurchase}>Confirmar Compra</Button>
-          </div>
-        </div>
-      </Modal>
+      <CheckoutModal
+        isOpen={showConfirm}
+        onClose={() => setShowConfirm(false)}
+        event={event}
+        onPaid={completePurchase}
+      />
+
+      {/* Rave Companion — rule-based, verified-data assistant */}
+      {event.venue && <RaveCompanion event={event} />}
     </div>
   )
 }

@@ -9,13 +9,21 @@ const SearchModal = ({ isOpen, onClose }) => {
   const [results, setResults] = useState({ events: [], organizers: [] })
   const inputRef = useRef(null)
 
+  const [loading, setLoading] = useState(false)
+
   useEffect(() => {
-    if (isOpen) { setQuery(''); inputRef.current?.focus() }
+    if (isOpen) { setQuery(''); setResults({ events: [], organizers: [] }); inputRef.current?.focus() }
   }, [isOpen])
 
   useEffect(() => {
-    if (query.length >= 2) setResults(searchAll(query))
-    else setResults({ events: [], organizers: [] })
+    if (query.length < 2) { setResults({ events: [], organizers: [] }); return }
+    setLoading(true)
+    const timer = setTimeout(async () => {
+      const data = await searchAll(query)
+      setResults(data)
+      setLoading(false)
+    }, 300)
+    return () => clearTimeout(timer)
   }, [query])
 
   if (!isOpen) return null

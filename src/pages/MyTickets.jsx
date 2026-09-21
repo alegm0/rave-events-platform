@@ -10,16 +10,28 @@ const MyTickets = () => {
   const { currentUser } = useAuth()
   const [tickets, setTickets] = useState([])
   const [filter, setFilter] = useState('all')
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (!currentUser) return
-    const raw = getTicketsByUser(currentUser.id)
-    setTickets(raw.map(t => ({ ...t, event: getEvent(t.eventId) })).reverse())
+    const loadTickets = async () => {
+      const raw = await getTicketsByUser(currentUser.id)
+      const enriched = []
+      for (const t of raw) {
+        const event = await getEvent(t.eventId)
+        enriched.push({ ...t, event })
+      }
+      setTickets(enriched.reverse())
+      setLoading(false)
+    }
+    loadTickets()
   }, [currentUser])
 
   const valid = tickets.filter(t => t.status === 'valid')
   const used = tickets.filter(t => t.status === 'used')
   const filtered = filter === 'all' ? tickets : filter === 'valid' ? valid : used
+
+  if (loading) return <div className="mt-page"><div className="container"><div className="loader"></div></div></div>
 
   return (
     <div className="mt-page">

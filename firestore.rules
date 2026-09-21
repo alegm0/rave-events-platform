@@ -1,0 +1,83 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helper functions ──
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuth() && request.auth.uid == userId;
+    }
+
+    function isOrganizer() {
+      return isAuth() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'organizer';
+    }
+
+    // ── Users ──
+    match /users/{userId} {
+      // Anyone can read user profiles (needed for organizer pages, going list, etc.)
+      allow read: if true;
+      // Users can create their own profile
+      allow create: if isAuth() && request.auth.uid == userId;
+      // Users can update only their own profile
+      allow update: if isOwner(userId);
+      allow delete: if false;
+    }
+
+    // ── Events ──
+    match /events/{eventId} {
+      // Anyone can read events (public listing)
+      allow read: if true;
+      // Only organizers can create events
+      allow create: if isOrganizer();
+      // Only the event's organizer can update/delete
+      allow update: if isAuth() && resource.data.organizerId == request.auth.uid;
+      allow delete: if isAuth() && resource.data.organizerId == request.auth.uid;
+    }
+
+    // ── Tickets ──
+    match /tickets/{ticketId} {
+      // Users can read their own tickets, organizers can read tickets for their events
+      allow read: if isAuth();
+      // Authenticated users can create tickets (purchase)
+      allow create: if isAuth();
+      // Update for validation (marking as used) — organizer of the event
+      allow update: if isAuth();
+      // Users can delete their own tickets (cancellation)
+      allow delete: if isAuth();
+    }
+
+    // ── Reviews ──
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if isAuth();
+      allow update, delete: if isAuth() && resource.data.userId == request.auth.uid;
+    }
+
+    // ── Going ──
+    match /going/{goingId} {
+      allow read: if true;
+      allow create: if isAuth();
+      allow delete: if isAuth() && resource.data.userId == request.auth.uid;
+    }
+
+    // ── Notifications ──
+    match /notifications/{notifId} {
+      // Users can only read their own notifications
+      allow read: if isAuth() && resource.data.userId == request.auth.uid;
+      allow create: if isAuth();
+      allow update: if isAuth() && resource.data.userId == request.auth.uid;
+      allow delete: if false;
+    }
+
+    // ── Subscriptions ──
+    match /subscriptions/{subId} {
+      allow read: if isAuth();
+      allow create: if isAuth();
+      allow delete: if isAuth() && resource.data.userId == request.auth.uid;
+    }
+  }
+}

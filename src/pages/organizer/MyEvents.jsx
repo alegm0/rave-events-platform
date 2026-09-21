@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { getEventsByOrganizer, getTicketsByEvent } from '../../lib/db'
 import { useAuth } from '../../context/AuthContext'
-import { FiPlus, FiMapPin, FiCalendar, FiUsers, FiBarChart2, FiCrosshair, FiClock } from 'react-icons/fi'
+import { FiPlus, FiMapPin, FiCalendar, FiUsers, FiBarChart2, FiCrosshair, FiClock, FiEdit } from 'react-icons/fi'
 import Button from '../../components/ui/Button'
 import './Dashboard.css'
 
@@ -13,11 +13,16 @@ const MyEvents = () => {
 
   useEffect(() => {
     if (currentUser) {
-      const evts = getEventsByOrganizer(currentUser.id).map(e => {
-        const t = getTicketsByEvent(e.id)
-        return { ...e, tickets: t.length, revenue: t.length * (e.price || 0), pct: e.capacity ? Math.round((t.length / e.capacity) * 100) : 0 }
-      })
-      setEvents(evts)
+      const load = async () => {
+        const rawEvts = await getEventsByOrganizer(currentUser.id)
+        const evts = []
+        for (const e of rawEvts) {
+          const t = await getTicketsByEvent(e.id)
+          evts.push({ ...e, tickets: t.length, revenue: t.length * (e.price || 0), pct: e.capacity ? Math.round((t.length / e.capacity) * 100) : 0 })
+        }
+        setEvents(evts)
+      }
+      load()
     }
   }, [currentUser])
 
@@ -94,6 +99,7 @@ const MyEvents = () => {
                     </div>
                     <div className="me-card-actions">
                       <Link to={`/organizer/event/${e.id}/analytics`}><Button variant="ghost" size="sm" icon={<FiBarChart2 />}>Analytics</Button></Link>
+                      {!isPast && <Link to={`/organizer/edit-event/${e.id}`}><Button variant="ghost" size="sm" icon={<FiEdit />}>Editar</Button></Link>}
                       {!isPast && <Link to={`/organizer/scanner/${e.id}`}><Button size="sm" icon={<FiCrosshair />}>Scanner</Button></Link>}
                     </div>
                   </div>

@@ -1,41 +1,74 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { getEvent, getTicketsByEvent, getEventAttendees, deleteEvent } from '../../lib/db'
-import { FiUsers, FiDollarSign, FiCheckCircle, FiClock, FiTrash2, FiEdit, FiCrosshair } from 'react-icons/fi'
+import { getEvent, getTicketsByEvent, getEventAttendees, deleteEvent, getReviewsByEvent } from '../../lib/db'
+import { useAuth } from '../../context/AuthContext'
+import { FiUsers, FiDollarSign, FiCheckCircle, FiClock, FiTrash2, FiEdit, FiCrosshair, FiXCircle } from 'react-icons/fi'
 import Button from '../../components/ui/Button'
 import Modal from '../../components/ui/Modal'
 import { useToast } from '../../components/ui/Toast'
+import DynamicPricing from '../../components/ai/DynamicPricing'
+import SentimentPanel from '../../components/ai/SentimentPanel'
+import FraudDetection from '../../components/ai/FraudDetection'
 import './Dashboard.css'
 
 const EventAnalytics = () => {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { currentUser } = useAuth()
   const toast = useToast()
   const [event, setEvent] = useState(null)
+  const [tickets, setTickets] = useState([])
   const [stats, setStats] = useState({ total: 0, revenue: 0, checkedIn: 0, pending: 0 })
   const [attendees, setAttendees] = useState([])
+  const [reviews, setReviews] = useState([])
   const [showDelete, setShowDelete] = useState(false)
+  const [denied, setDenied] = useState(false)
 
   useEffect(() => {
-    const e = getEvent(id)
-    if (e) {
-      setEvent(e)
-      const tickets = getTicketsByEvent(id)
-      setStats({
-        total: tickets.length,
-        revenue: tickets.length * (e.price || 0),
-        checkedIn: tickets.filter(t => t.status === 'used').length,
-        pending: tickets.filter(t => t.status === 'valid').length,
-      })
-      setAttendees(getEventAttendees(id))
+    const load = async () => {
+      const e = await getEvent(id)
+      // Authorization by ownership: only the event's organizer sees its analytics
+      if (e && currentUser && e.organizerId !== currentUser.id) {
+        setDenied(true)
+        return
+      }
+      if (e) {
+        setEvent(e)
+        const tix = await getTicketsByEvent(id)
+        setTickets(tix)
+        setStats({
+          total: tix.length,
+          revenue: tix.length * (e.price || 0),
+          checkedIn: tix.filter(t => t.status === 'used').length,
+          pending: tix.filter(t => t.status === 'valid').length,
+        })
+        setAttendees(await getEventAttendees(id))
+        setReviews(await getReviewsByEvent(id))
+      }
     }
-  }, [id])
+    load()
+  }, [id, currentUser])
 
-  const handleDelete = () => {
-    deleteEvent(id)
+  const handleDelete = async () => {
+    await deleteEvent(id)
     toast.success('Evento eliminado')
     navigate('/organizer/my-events')
   }
+
+  if (denied) return (
+    <div className="dash-page">
+      <div className="container" style={{ padding: '4rem 1rem', textAlign: 'center' }}>
+        <FiXCircle size={48} style={{ color: '#ff3d00' }} />
+        <h1 style={{ color: '#fff', marginTop: '1rem' }}>Acceso denegado</h1>
+        <p style={{ color: 'rgba(255,255,255,0.5)', marginTop: '0.5rem' }}>
+          Solo el organizador de este evento puede ver sus analíticas.
+        </p>
+        <div style={{ marginTop: '1.5rem' }}>
+          <Button onClick={() => navigate('/organizer/dashboard')}>Volver al dashboard</Button>
+        </div>
+      </div>
+    </div>
+  )
 
   if (!event) return <div className="loading-container"><div className="loader"></div></div>
 
@@ -50,6 +83,7 @@ const EventAnalytics = () => {
             <h1 className="dash-title">{event.title}</h1>
           </div>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <Link to={`/organizer/edit-event/${id}`}><Button variant="ghost" icon={<FiEdit />}>Editar</Button></Link>
             <Link to={`/organizer/scanner/${id}`}><Button icon={<FiCrosshair />}>Scanner</Button></Link>
             <Button variant="ghost" onClick={() => setShowDelete(true)} icon={<FiTrash2 />} className="btn-danger-ghost">Eliminar</Button>
           </div>
@@ -111,6 +145,10 @@ const EventAnalytics = () => {
             <div className="dash-empty"><p>Aún no hay asistentes</p></div>
           )}
         </div>
+        {/* AI-Powered Analytics */}
+        <DynamicPricing event={event} tickets={tickets} />
+        <SentimentPanel reviews={reviews} />
+        <FraudDetection tickets={tickets} allTickets={tickets} />
       </div>
 
       {/* Delete confirmation */}

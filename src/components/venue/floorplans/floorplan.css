@@ -1,0 +1,162 @@
+/* ═══════════════════════════════════════════
+   Drawn venue floor plans — base map layer
+   Top-down architectural look: walls, rooms, floor.
+   ═══════════════════════════════════════════ */
+
+/* interior floor */
+.fp-floor {
+  fill: #131316;
+}
+
+/* walls: thick continuous shell + thinner interior divisions */
+.fp-wall {
+  fill: none;
+  stroke: #d7d7dc;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+  vector-effect: non-scaling-stroke;
+}
+.fp-wall-outer { stroke-width: 3.5px; }
+.fp-wall-inner { stroke-width: 2px; stroke: #8f8f97; }
+
+/* door thresholds cut into walls */
+.fp-door { fill: #131316; }
+.fp-threshold { fill: #ff9800; opacity: 0.85; }
+
+/* rooms */
+.fp-room {
+  fill: rgba(255, 255, 255, 0.035);
+  stroke: #8f8f97;
+  stroke-width: 1.6px;
+  vector-effect: non-scaling-stroke;
+}
+.fp-room-quiet {
+  fill: rgba(120, 160, 255, 0.08);
+}
+
+/* stage: solid recess + bright front lip + booth */
+.fp-stage {
+  fill: rgba(255, 61, 0, 0.22);
+  stroke: rgba(255, 61, 0, 0.55);
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+}
+.fp-stage-lip { fill: #ff3d00; }
+.fp-booth { fill: rgba(255, 255, 255, 0.35); }
+
+/* dancefloor crowd texture */
+.fp-crowd-dot { fill: rgba(255, 255, 255, 0.14); }
+
+/* ── labels ── */
+.fp-label {
+  font-family: var(--font-body, sans-serif);
+  fill: rgba(255, 255, 255, 0.82);
+  paint-order: stroke;
+  stroke: rgba(0, 0, 0, 0.55);
+  stroke-width: 0.7px;
+  pointer-events: none;
+}
+.fp-label-stage {
+  fill: #fff;
+  font-size: 3px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+}
+.fp-label-floor {
+  fill: rgba(255, 255, 255, 0.55);
+  font-size: 4px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+}
+.fp-sublabel {
+  fill: rgba(255, 255, 255, 0.3);
+  font-size: 2.4px;
+  font-weight: 500;
+  letter-spacing: 0.4px;
+  font-family: var(--font-body, sans-serif);
+  pointer-events: none;
+}
+.fp-label-room {
+  font-size: 3px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+/* access labels below the bottom wall */
+.fp-access-label {
+  fill: rgba(255, 255, 255, 0.5);
+  font-size: 2.6px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  font-family: var(--font-body, sans-serif);
+  pointer-events: none;
+}
+
+/* ── FloorPlanMap: base plan + you-are-here + route ── */
+.fpm { width: 100%; }
+.fpm-svg {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  display: block;
+  background: radial-gradient(130% 100% at 50% 0%, #17171a 0%, #0b0b0c 72%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+}
+.fpm--compact .fpm-svg { max-height: 46vh; }
+
+/* route */
+.fpm-route-shadow {
+  fill: none;
+  stroke: rgba(0, 0, 0, 0.6);
+  stroke-width: 2.4px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+.fpm-route {
+  fill: none;
+  stroke: #ff3d00;
+  stroke-width: 1.6px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 2 1.6;
+  vector-effect: non-scaling-stroke;
+  animation: fpm-flow 12s linear infinite;
+}
+@keyframes fpm-flow { to { stroke-dashoffset: -60; } }
+
+/* destination */
+.fpm-dest-dot { fill: #ff3d00; }
+.fpm-dest-ring {
+  fill: none;
+  stroke: rgba(255, 61, 0, 0.6);
+  stroke-width: 0.6;
+  vector-effect: non-scaling-stroke;
+}
+
+/* you are here */
+.fpm-here-dot { fill: #4caf50; }
+.fpm-here-pulse {
+  fill: none;
+  stroke: rgba(76, 175, 80, 0.7);
+  stroke-width: 0.6;
+  vector-effect: non-scaling-stroke;
+  transform-origin: center;
+  animation: fpm-pulse 2s ease-out infinite;
+}
+@keyframes fpm-pulse {
+  0% { transform: scale(0.4); opacity: 1; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+
+.fpm-legend {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.6rem;
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+.fpm-legend-item { display: inline-flex; align-items: center; gap: 0.35rem; }
+.fpm-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.fpm-dot-here { background: #4caf50; }
+.fpm-dot-dest { background: #ff3d00; }

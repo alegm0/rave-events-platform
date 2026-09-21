@@ -17,10 +17,12 @@ import MyTickets from './pages/MyTickets'
 import TicketDetail from './pages/TicketDetail'
 import Dashboard from './pages/organizer/Dashboard'
 import CreateEvent from './pages/organizer/CreateEvent'
+import EditEvent from './pages/organizer/EditEvent'
 import MyEvents from './pages/organizer/MyEvents'
 import EventAnalytics from './pages/organizer/EventAnalytics'
 import QRScanner from './pages/organizer/QRScanner'
 import EditBrand from './pages/organizer/EditBrand'
+import RaveMode from './pages/RaveMode'
 import NotFound from './pages/NotFound'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 
@@ -30,80 +32,78 @@ function ScrollToTop() {
   return null
 }
 
+function AppShell() {
+  const { pathname } = useLocation()
+  // Rave Mode is a full-screen, chrome-less experience by design
+  const bareLayout = pathname.startsWith('/rave-mode')
+
+  return (
+    <div className="app">
+      {!bareLayout && <Navbar />}
+      <main>
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/" element={<Home />} />
+          <Route path="/events" element={<Events />} />
+          <Route path="/event/:id" element={<EventDetail />} />
+          <Route path="/calendar" element={<Calendar />} />
+          <Route path="/coming-soon" element={<ComingSoon />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/organizer/:id" element={<OrganizerProfile />} />
+
+          {/* User Protected Routes */}
+          <Route path="/profile" element={
+            <ProtectedRoute><Profile /></ProtectedRoute>
+          } />
+          <Route path="/my-tickets" element={
+            <ProtectedRoute><MyTickets /></ProtectedRoute>
+          } />
+          <Route path="/ticket/:id" element={
+            <ProtectedRoute><TicketDetail /></ProtectedRoute>
+          } />
+          <Route path="/rave-mode/:id" element={
+            <ProtectedRoute><RaveMode /></ProtectedRoute>
+          } />
+
+          {/* Organizer Protected Routes */}
+          <Route path="/organizer/dashboard" element={
+            <ProtectedRoute requireOrganizer><Dashboard /></ProtectedRoute>
+          } />
+          <Route path="/organizer/create-event" element={
+            <ProtectedRoute requireOrganizer><CreateEvent /></ProtectedRoute>
+          } />
+          <Route path="/organizer/edit-event/:id" element={
+            <ProtectedRoute requireOrganizer><EditEvent /></ProtectedRoute>
+          } />
+          <Route path="/organizer/my-events" element={
+            <ProtectedRoute requireOrganizer><MyEvents /></ProtectedRoute>
+          } />
+          <Route path="/organizer/event/:id/analytics" element={
+            <ProtectedRoute requireOrganizer><EventAnalytics /></ProtectedRoute>
+          } />
+          <Route path="/organizer/scanner/:eventId" element={
+            <ProtectedRoute requireOrganizer><QRScanner /></ProtectedRoute>
+          } />
+          <Route path="/organizer/edit-brand" element={
+            <ProtectedRoute requireOrganizer><EditBrand /></ProtectedRoute>
+          } />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </main>
+      {!bareLayout && <Footer />}
+    </div>
+  )
+}
+
 function App() {
   return (
     <AuthProvider>
       <ToastProvider>
-      <Router>
-        <ScrollToTop />
-        <div className="app">
-          <Navbar />
-          <main>
-            <Routes>
-              {/* Public Routes */}
-              <Route path="/" element={<Home />} />
-              <Route path="/events" element={<Events />} />
-              <Route path="/event/:id" element={<EventDetail />} />
-              <Route path="/calendar" element={<Calendar />} />
-              <Route path="/coming-soon" element={<ComingSoon />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/organizer/:id" element={<OrganizerProfile />} />
-              
-              {/* User Protected Routes */}
-              <Route path="/profile" element={
-                <ProtectedRoute>
-                  <Profile />
-                </ProtectedRoute>
-              } />
-              <Route path="/my-tickets" element={
-                <ProtectedRoute>
-                  <MyTickets />
-                </ProtectedRoute>
-              } />
-              <Route path="/ticket/:id" element={
-                <ProtectedRoute>
-                  <TicketDetail />
-                </ProtectedRoute>
-              } />
-              
-              {/* Organizer Protected Routes */}
-              <Route path="/organizer/dashboard" element={
-                <ProtectedRoute requireOrganizer>
-                  <Dashboard />
-                </ProtectedRoute>
-              } />
-              <Route path="/organizer/create-event" element={
-                <ProtectedRoute requireOrganizer>
-                  <CreateEvent />
-                </ProtectedRoute>
-              } />
-              <Route path="/organizer/my-events" element={
-                <ProtectedRoute requireOrganizer>
-                  <MyEvents />
-                </ProtectedRoute>
-              } />
-              <Route path="/organizer/event/:id/analytics" element={
-                <ProtectedRoute requireOrganizer>
-                  <EventAnalytics />
-                </ProtectedRoute>
-              } />
-              <Route path="/organizer/scanner/:eventId" element={
-                <ProtectedRoute requireOrganizer>
-                  <QRScanner />
-                </ProtectedRoute>
-              } />
-              <Route path="/organizer/edit-brand" element={
-                <ProtectedRoute requireOrganizer>
-                  <EditBrand />
-                </ProtectedRoute>
-              } />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </main>
-          <Footer />
-        </div>
-      </Router>
+        <Router>
+          <ScrollToTop />
+          <AppShell />
+        </Router>
       </ToastProvider>
     </AuthProvider>
   )

@@ -153,3 +153,102 @@
   background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.7);
   font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.12em; font-weight: 600;
 }
+
+/* ── AI Recommendations ── */
+.events-recs {
+  margin-bottom: 2.5rem;
+  padding: 1.5rem;
+  background: #111;
+  border: 1px solid rgba(255,61,0,0.1);
+}
+.events-recs-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+.events-recs-header h2 {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  letter-spacing: 0.03em;
+}
+.events-recs-badge {
+  font-size: 0.55rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  padding: 0.2rem 0.5rem;
+  background: rgba(255,61,0,0.1);
+  color: #ff3d00;
+  border: 1px solid rgba(255,61,0,0.2);
+}
+.events-recs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 2px;
+}
+.events-rec-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.04);
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+.events-rec-card:hover {
+  background: rgba(255,255,255,0.05);
+  border-color: rgba(255,61,0,0.2);
+}
+.events-rec-card img {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.events-rec-info {
+  flex: 1;
+  min-width: 0;
+}
+.events-rec-info h4 {
+  font-size: 0.85rem;
+  color: #fff;
+  font-weight: 600;
+  margin-bottom: 0.15rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.events-rec-info > span {
+  font-size: 0.7rem;
+  color: rgba(255,255,255,0.35);
+  display: block;
+  margin-bottom: 0.3rem;
+}
+.events-rec-reasons {
+  display: flex;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+}
+.events-rec-reason {
+  font-size: 0.6rem;
+  padding: 0.1rem 0.4rem;
+  background: rgba(255,61,0,0.08);
+  color: rgba(255,61,0,0.8);
+  white-space: nowrap;
+}
+.events-rec-score {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #ff3d00;
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .events-recs-grid { grid-template-columns: 1fr; }
+}

@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { createEvent } from '../../lib/db'
+import { uploadImage } from '../../lib/storage'
 import { useAuth } from '../../context/AuthContext'
-import { FiArrowRight, FiArrowLeft, FiCheck, FiMapPin, FiCalendar, FiClock, FiUsers, FiDollarSign, FiImage, FiMusic } from 'react-icons/fi'
+import { FiArrowRight, FiArrowLeft, FiCheck, FiMapPin, FiCalendar, FiClock, FiUsers, FiDollarSign, FiImage, FiMusic, FiLoader } from 'react-icons/fi'
 import Button from '../../components/ui/Button'
 import { useToast } from '../../components/ui/Toast'
 import './CreateEvent.css'
@@ -39,6 +40,7 @@ const CreateEvent = () => {
   const [showGenres, setShowGenres] = useState(false)
   const [lineupMode, setLineupMode] = useState('individual')
   const [bulkLineup, setBulkLineup] = useState('')
+  const [uploading, setUploading] = useState(false)
   const [step, setStep] = useState(1)
   const [errors, setErrors] = useState({})
   const [form, setForm] = useState({
@@ -48,6 +50,7 @@ const CreateEvent = () => {
     genre: '', imageUrl: '', imagePos: 50, minAge: '18',
     lineup: [],
     uploadedImage: null,
+    uploadedFile: null,
     pricingMode: 'single', // 'single' or 'tiers'
     tiers: [
       { name: 'Early Bird', price: '', qty: '' },
@@ -90,32 +93,51 @@ const CreateEvent = () => {
   const nextStep = () => { if (validateStep(step)) setStep(s => Math.min(s + 1, 4)) }
   const prevStep = () => setStep(s => Math.max(s - 1, 1))
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!validateStep(3)) { setStep(3); return }
-    createEvent({
-      title: form.title.trim(),
-      description: form.description.trim(),
-      date: form.date,
-      time: form.time,
-      duration: parseInt(form.duration) || 6,
-      imagePos: form.imagePos,
-      location: form.location.trim(),
-      address: form.address.trim(),
-      city: form.city.trim(),
-      price: form.pricingMode === 'single' ? (parseFloat(form.price) || 0) : parseFloat(form.tiers[0]?.price || 0),
-      pricingMode: form.pricingMode,
-      tiers: form.pricingMode === 'tiers' ? form.tiers.filter(t => t.name && t.price) : [],
-      capacity: parseInt(form.capacity) || 200,
-      genre: form.genre,
-      imageUrl: form.imageUrl || IMAGES[0],
-      minAge: parseInt(form.minAge) || 18,
-      lineup: form.lineup.filter(a => a.name.trim()),
-      organizerId: currentUser.id,
-      status: 'active',
-      ticketsSold: 0,
-    })
-    navigate('/organizer/dashboard')
-    toast.success('¡Evento publicado exitosamente!')
+    setUploading(true)
+    try {
+      // Upload image to Firebase Storage if it's a local file
+      let finalImageUrl = form.imageUrl || IMAGES[0]
+      if (form.uploadedFile) {
+        try {
+          finalImageUrl = await uploadImage(form.uploadedFile, `events/${currentUser.id}`)
+        } catch (uploadErr) {
+          toast.error('Error subiendo imagen: ' + uploadErr.message)
+          setUploading(false)
+          return
+        }
+      }
+
+      await createEvent({
+        title: form.title.trim(),
+        description: form.description.trim(),
+        date: form.date,
+        time: form.time,
+        duration: parseInt(form.duration) || 6,
+        imagePos: form.imagePos,
+        location: form.location.trim(),
+        address: form.address.trim(),
+        city: form.city.trim(),
+        price: form.pricingMode === 'single' ? (parseFloat(form.price) || 0) : parseFloat(form.tiers[0]?.price || 0),
+        pricingMode: form.pricingMode,
+        tiers: form.pricingMode === 'tiers' ? form.tiers.filter(t => t.name && t.price) : [],
+        capacity: parseInt(form.capacity) || 200,
+        genre: form.genre,
+        imageUrl: finalImageUrl,
+        minAge: parseInt(form.minAge) || 18,
+        lineup: form.lineup.filter(a => a.name.trim()),
+        organizerId: currentUser.id,
+        status: 'active',
+        ticketsSold: 0,
+      })
+      navigate('/organizer/dashboard')
+      toast.success('¡Evento publicado exitosamente!')
+    } catch (err) {
+      toast.error('Error creando evento: ' + err.message)
+    } finally {
+      setUploading(false)
+    }
   }
 
   return (
@@ -407,25 +429,27 @@ const CreateEvent = () => {
                       e.preventDefault(); e.currentTarget.classList.remove('dragging')
                       const file = e.dataTransfer.files[0]
                       if (file && file.type.startsWith('image/')) {
-                        const reader = new FileReader()
-                        reader.onload = (ev) => { set('uploadedImage', ev.target.result); set('imageUrl', ev.target.result) }
-                        reader.readAsDataURL(file)
+                        if (file.size > 5 * 1024 * 1024) { toast.error('La imagen no puede superar 5MB'); return }
+                        set('uploadedFile', file)
+                        set('uploadedImage', URL.createObjectURL(file))
+                        set('imageUrl', URL.createObjectURL(file))
                       }
                     }}>
                     <input type="file" accept="image/*" id="ce-file-input" style={{ display: 'none' }}
                       onChange={e => {
                         const file = e.target.files[0]
                         if (file) {
-                          const reader = new FileReader()
-                          reader.onload = (ev) => { set('uploadedImage', ev.target.result); set('imageUrl', ev.target.result) }
-                          reader.readAsDataURL(file)
+                          if (file.size > 5 * 1024 * 1024) { toast.error('La imagen no puede superar 5MB'); return }
+                          set('uploadedFile', file)
+                          set('uploadedImage', URL.createObjectURL(file))
+                          set('imageUrl', URL.createObjectURL(file))
                         }
                       }} />
                     {form.uploadedImage ? (
                       <div className="ce-upload-preview">
                         <img src={form.uploadedImage} alt="" style={{ objectPosition: `center ${form.imagePos}%` }} />
                         <div className="ce-upload-actions">
-                          <button type="button" onClick={() => { set('uploadedImage', null); set('imageUrl', '') }}>✕ Quitar</button>
+                          <button type="button" onClick={() => { set('uploadedImage', null); set('uploadedFile', null); set('imageUrl', '') }}>✕ Quitar</button>
                           <button type="button" onClick={() => document.getElementById('ce-file-input').click()}>Cambiar</button>
                         </div>
                       </div>
@@ -460,7 +484,7 @@ const CreateEvent = () => {
                     {IMAGES.map((img, i) => (
                       <button key={i} type="button"
                         className={`ce-image-option ${form.imageUrl === img ? 'active' : ''}`}
-                        onClick={() => { set('imageUrl', img); set('uploadedImage', null) }}>
+                        onClick={() => { set('imageUrl', img); set('uploadedImage', null); set('uploadedFile', null) }}>
                         <img src={img} alt="" loading="lazy" />
                         {form.imageUrl === img && <div className="ce-image-check"><FiCheck /></div>}
                       </button>
@@ -471,7 +495,7 @@ const CreateEvent = () => {
                 <div className="ce-field">
                   <label>O pega una URL</label>
                   <input type="url" value={form.uploadedImage ? '' : form.imageUrl}
-                    onChange={e => { set('imageUrl', e.target.value); set('uploadedImage', null) }}
+                    onChange={e => { set('imageUrl', e.target.value); set('uploadedImage', null); set('uploadedFile', null) }}
                     placeholder="https://tu-imagen.com/foto.jpg"
                     disabled={!!form.uploadedImage} />
                 </div>
@@ -487,7 +511,9 @@ const CreateEvent = () => {
               {step < 4 ? (
                 <Button onClick={nextStep}>Siguiente <FiArrowRight /></Button>
               ) : (
-                <Button onClick={handleSubmit} size="lg">Publicar Evento <FiCheck /></Button>
+                <Button onClick={handleSubmit} size="lg" disabled={uploading}>
+                  {uploading ? <><FiLoader className="spin" /> Subiendo...</> : <>Publicar Evento <FiCheck /></>}
+                </Button>
               )}
             </div>
           </div>

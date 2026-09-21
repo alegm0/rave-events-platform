@@ -1,21 +1,54 @@
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { getTicketsByUser, getEventsByOrganizer, getTicketsByEvent, getEvent } from '../lib/db'
 import { FiUser, FiMail, FiCalendar, FiPlus, FiBarChart2, FiUsers, FiDollarSign, FiLogOut, FiArrowRight } from 'react-icons/fi'
 import Button from '../components/ui/Button'
+import ComfortProfile from '../components/ui/ComfortProfile'
 import './Profile.css'
 
 const Profile = () => {
   const { currentUser, userProfile, logout } = useAuth()
   const isOrg = userProfile?.role === 'organizer'
+  const [loading, setLoading] = useState(true)
+  const [orgEvents, setOrgEvents] = useState([])
+  const [orgTickets, setOrgTickets] = useState(0)
+  const [orgRevenue, setOrgRevenue] = useState(0)
+  const [userTickets, setUserTickets] = useState([])
+  const [ticketEvents, setTicketEvents] = useState({})
+  const [eventTicketCounts, setEventTicketCounts] = useState({})
 
-  // Organizer stats
-  const orgEvents = isOrg ? getEventsByOrganizer(currentUser?.id) : []
-  const orgTickets = isOrg ? orgEvents.reduce((sum, e) => sum + getTicketsByEvent(e.id).length, 0) : 0
-  const orgRevenue = isOrg ? orgEvents.reduce((sum, e) => sum + getTicketsByEvent(e.id).length * (e.price || 0), 0) : 0
+  useEffect(() => {
+    const load = async () => {
+      if (isOrg && currentUser) {
+        const evts = await getEventsByOrganizer(currentUser.id)
+        setOrgEvents(evts)
+        let tix = 0, rev = 0
+        const counts = {}
+        for (const e of evts) {
+          const t = await getTicketsByEvent(e.id)
+          counts[e.id] = t.length
+          tix += t.length
+          rev += t.length * (e.price || 0)
+        }
+        setEventTicketCounts(counts)
+        setOrgTickets(tix)
+        setOrgRevenue(rev)
+      } else if (currentUser) {
+        const tickets = await getTicketsByUser(currentUser.id)
+        setUserTickets(tickets)
+        const evtMap = {}
+        for (const t of tickets.slice(0, 3)) {
+          evtMap[t.eventId] = await getEvent(t.eventId)
+        }
+        setTicketEvents(evtMap)
+      }
+      setLoading(false)
+    }
+    load()
+  }, [currentUser, isOrg])
 
-  // Attendee stats
-  const userTickets = !isOrg && currentUser ? getTicketsByUser(currentUser.id) : []
+  if (loading) return <div className="prof-page"><div className="container"><div className="loader"></div></div></div>
 
   return (
     <div className="prof-page">
@@ -95,7 +128,7 @@ const Profile = () => {
                     <div className="prof-section-title">Últimos eventos</div>
                     <div className="prof-events-list">
                       {orgEvents.slice(0, 3).map(e => {
-                        const tix = getTicketsByEvent(e.id).length
+                        const tix = eventTicketCounts[e.id] || 0
                         return (
                           <Link to={`/organizer/event/${e.id}/analytics`} key={e.id} className="prof-event-item">
                             <img src={e.imageUrl || 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=200'} alt="" />
@@ -143,13 +176,17 @@ const Profile = () => {
                   </Link>
                 </div>
 
+                {/* Comfort & Accessibility Profile */}
+                <div className="prof-section-title">Comodidad y accesibilidad</div>
+                <ComfortProfile />
+
                 {/* Recent tickets */}
                 {userTickets.length > 0 && (
                   <>
                     <div className="prof-section-title">Últimos tickets</div>
                     <div className="prof-events-list">
                       {userTickets.slice(0, 3).map(t => {
-                        const evt = getEvent(t.eventId)
+                        const evt = ticketEvents[t.eventId]
                         return (
                           <Link to={`/ticket/${t.id}`} key={t.id} className="prof-event-item">
                             <img src={evt?.imageUrl || 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=200'} alt="" />

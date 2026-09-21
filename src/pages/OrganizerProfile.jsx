@@ -15,13 +15,21 @@ const OrganizerProfile = () => {
   const [totalTickets, setTotalTickets] = useState(0)
 
   useEffect(() => {
-    const user = getUser(id)
-    if (user) {
-      setOrg(user)
-      const evts = getEventsByOrganizer(id)
-      setEvents(evts)
-      setTotalTickets(evts.reduce((sum, e) => sum + getTicketsByEvent(e.id).length + (e.ticketsSold || 0), 0))
+    const load = async () => {
+      const user = await getUser(id)
+      if (user) {
+        setOrg(user)
+        const evts = await getEventsByOrganizer(id)
+        setEvents(evts)
+        let total = 0
+        for (const e of evts) {
+          const t = await getTicketsByEvent(e.id)
+          total += t.length + (e.ticketsSold || 0)
+        }
+        setTotalTickets(total)
+      }
     }
+    load()
     window.scrollTo(0, 0)
   }, [id])
 

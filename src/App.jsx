@@ -21,6 +21,7 @@ import EditEvent from './pages/organizer/EditEvent'
 import MyEvents from './pages/organizer/MyEvents'
 import EventAnalytics from './pages/organizer/EventAnalytics'
 import QRScanner from './pages/organizer/QRScanner'
+import LiveOps from './pages/organizer/LiveOps'
 import EditBrand from './pages/organizer/EditBrand'
 import RaveMode from './pages/RaveMode'
 import NotFound from './pages/NotFound'
@@ -81,6 +82,9 @@ function AppShell() {
           } />
           <Route path="/organizer/event/:id/analytics" element={
             <ProtectedRoute requireOrganizer><EventAnalytics /></ProtectedRoute>
+          } />
+          <Route path="/organizer/event/:id/live" element={
+            <ProtectedRoute requireOrganizer><LiveOps /></ProtectedRoute>
           } />
           <Route path="/organizer/scanner/:eventId" element={
             <ProtectedRoute requireOrganizer><QRScanner /></ProtectedRoute>

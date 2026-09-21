@@ -14,6 +14,9 @@ const FLOOR_PLANS = {
   warehouse: WarehouseFloorPlan,
 }
 const detectFloorPlan = (venue) => {
+  // `kind` is set by the organizer's venue editor; the setting string is the
+  // legacy signal for venues that came from an auto-applied template.
+  if (venue?.kind && FLOOR_PLANS[venue.kind]) return venue.kind
   const s = (venue?.setting || '').toLowerCase()
   if (s.includes('warehouse')) return 'warehouse'
   return null

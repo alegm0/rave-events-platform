@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { getEvent, getTicketsByEvent, getEventAttendees, deleteEvent, getReviewsByEvent } from '../../lib/db'
+import { getEvent, getTicketsByEvent, getEventAttendees, deleteEvent, getReviewsByEvent, sumRevenue, hasTiers, getTierStatus } from '../../lib/db'
 import { useAuth } from '../../context/AuthContext'
-import { FiUsers, FiDollarSign, FiCheckCircle, FiClock, FiTrash2, FiEdit, FiCrosshair, FiXCircle } from 'react-icons/fi'
+import { FiUsers, FiDollarSign, FiCheckCircle, FiClock, FiTrash2, FiEdit, FiCrosshair, FiXCircle, FiActivity } from 'react-icons/fi'
 import Button from '../../components/ui/Button'
 import Modal from '../../components/ui/Modal'
 import { useToast } from '../../components/ui/Toast'
@@ -38,7 +38,8 @@ const EventAnalytics = () => {
         setTickets(tix)
         setStats({
           total: tix.length,
-          revenue: tix.length * (e.price || 0),
+          // Sum of what attendees actually paid, not tickets × current price
+          revenue: sumRevenue(tix, e),
           checkedIn: tix.filter(t => t.status === 'used').length,
           pending: tix.filter(t => t.status === 'valid').length,
         })
@@ -84,6 +85,7 @@ const EventAnalytics = () => {
           </div>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <Link to={`/organizer/edit-event/${id}`}><Button variant="ghost" icon={<FiEdit />}>Editar</Button></Link>
+            <Link to={`/organizer/event/${id}/live`}><Button variant="ghost" icon={<FiActivity />}>En vivo</Button></Link>
             <Link to={`/organizer/scanner/${id}`}><Button icon={<FiCrosshair />}>Scanner</Button></Link>
             <Button variant="ghost" onClick={() => setShowDelete(true)} icon={<FiTrash2 />} className="btn-danger-ghost">Eliminar</Button>
           </div>
@@ -117,6 +119,32 @@ const EventAnalytics = () => {
           </div>
           <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.7rem', marginTop: '0.4rem', display: 'block' }}>{pct}% vendido</span>
         </div>
+
+        {/* Sales by pricing phase — only when the organizer configured tiers */}
+        {hasTiers(event) && (
+          <div className="dash-section" style={{ marginTop: '2rem' }}>
+            <h2 className="dash-section-title">Ventas por fase</h2>
+            <div className="dash-events">
+              <div className="dash-event-row" style={{ gridTemplateColumns: '1fr auto auto auto', background: '#1a1a1a', fontWeight: 600, fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                <span>Fase</span><span>Precio</span><span>Vendidos</span><span>Estado</span>
+              </div>
+              {getTierStatus(event, tickets).map(t => (
+                <div key={t.name} className="dash-event-row" style={{ gridTemplateColumns: '1fr auto auto auto' }}>
+                  <span style={{ color: '#fff', fontSize: '0.85rem' }}>{t.name}</span>
+                  <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.8rem' }}>${t.price}</span>
+                  <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.8rem' }}>
+                    {t.sold}{t.qty > 0 ? ` / ${t.qty}` : ''}
+                  </span>
+                  <span style={{
+                    padding: '0.2rem 0.6rem', fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase',
+                    background: t.active ? 'rgba(255,61,0,0.15)' : t.soldOut ? 'rgba(76,175,80,0.15)' : 'rgba(255,255,255,0.06)',
+                    color: t.active ? '#ff6d3a' : t.soldOut ? '#4caf50' : 'rgba(255,255,255,0.4)',
+                  }}>{t.active ? 'En venta' : t.soldOut ? 'Agotada' : 'Pendiente'}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Attendees list */}
         <div className="dash-section" style={{ marginTop: '2rem' }}>

@@ -8,10 +8,14 @@ import {
 } from 'firebase/auth'
 import {
   createUser, getUser, updateUser, seedData, backfillVenues, ensureFeaturedEvents,
-  processSubscriptionReminders, loginDemoUser, purgeStoredPasswords
+  processSubscriptionReminders, loginDemoUser, ensureDemoFlags, purgeStoredPasswords
 } from '../lib/db'
 
 const AuthContext = createContext()
+
+// The only roles the app recognises. Anything else falls back to 'user' so the
+// role can never be a free-form value coming from the client.
+const ALLOWED_ROLES = ['user', 'organizer']
 
 // Firebase Auth error codes mapped to messages the user can act on.
 const REGISTER_ERRORS = {
@@ -41,8 +45,20 @@ export const AuthProvider = ({ children }) => {
       // Strip any plaintext `password` field left behind by older versions. The
       // users collection is world-readable (see firestore.rules), so this runs
       // on every boot until no document carries the field.
+      // Flag the seeded fixtures first, then drop their stored passwords: the
+      // demo login checks the flag, never a password kept in the database.
+      .then(() => ensureDemoFlags())
       .then(() => purgeStoredPasswords())
-      .catch(() => {})
+      .catch((err) => {
+        // Seeding writes as an anonymous visitor, which the deployed Firestore
+        // rules reject on purpose. Say so instead of failing silently.
+        console.warn(
+          '[rave] No se pudo sembrar/actualizar los datos de demostración. ' +
+          'Con las reglas de Firestore desplegadas esto es lo esperado: ejecuta el seeding ' +
+          'con el emulador o con credenciales de administrador.',
+          err?.code || err?.message || err
+        )
+      })
 
     // Listen to Firebase Auth state
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -87,7 +103,7 @@ export const AuthProvider = ({ children }) => {
         id: firebaseUser.uid,
         email,
         displayName,
-        role,
+        role: ALLOWED_ROLES.includes(role) ? role : 'user',
         favorites: [],
         stats: { eventsAttended: 0, totalSpent: 0 }
       }
@@ -139,7 +155,10 @@ export const AuthProvider = ({ children }) => {
 
   const updateProfile = async (data) => {
     if (!currentUser) return
-    const updated = await updateUser(currentUser.id, data)
+    // `role` and `demo` are not editable from the profile: promoting yourself to
+    // organizer must not be a matter of sending a different field.
+    const { role, demo, password, ...safe } = data
+    const updated = await updateUser(currentUser.id, safe)
     setCurrentUser(updated)
     setUserProfile(updated)
   }

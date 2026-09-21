@@ -1,0 +1,132 @@
+/* Live operations (organizer) */
+
+.lo-page { min-height: 100vh; padding: 6rem 0 4rem; background: #0a0a0a; }
+
+/* Header */
+.lo-head {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  gap: 1.5rem; flex-wrap: wrap; margin-bottom: 0.5rem;
+}
+.lo-head-left { display: flex; flex-direction: column; gap: 0.4rem; }
+.lo-back {
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  color: rgba(255, 255, 255, 0.35); font-size: 0.75rem; text-decoration: none;
+}
+.lo-back:hover { color: #ff3d00; }
+
+.lo-phase {
+  display: inline-flex; align-items: center; gap: 0.4rem; width: fit-content;
+  padding: 0.25rem 0.6rem; font-size: 0.62rem; font-weight: 800;
+  text-transform: uppercase; letter-spacing: 0.14em;
+  background: rgba(255, 255, 255, 0.06); color: rgba(255, 255, 255, 0.5);
+}
+.lo-phase--live { background: rgba(255, 61, 0, 0.14); color: #ff6d3a; }
+.lo-phase--before { background: rgba(33, 150, 243, 0.14); color: #64b5f6; }
+.lo-phase--after { background: rgba(255, 255, 255, 0.06); color: rgba(255, 255, 255, 0.4); }
+.lo-dot {
+  width: 6px; height: 6px; border-radius: 50%; background: #ff3d00;
+  animation: lo-pulse 1.6s ease-in-out infinite;
+}
+@keyframes lo-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+
+.lo-title {
+  display: flex; align-items: center; gap: 0.55rem;
+  color: #fff; font-size: 1.6rem; font-weight: 900; letter-spacing: 0.04em;
+}
+.lo-event { color: rgba(255, 255, 255, 0.45); font-size: 0.85rem; }
+
+.lo-head-actions { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.lo-auto {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  padding: 0.5rem 0.8rem; background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.12); color: rgba(255, 255, 255, 0.5);
+  font-size: 0.72rem; font-weight: 600; cursor: pointer; font-family: var(--font-body);
+}
+.lo-auto.is-on { border-color: rgba(76, 175, 80, 0.4); color: #4caf50; }
+
+.lo-sync {
+  color: rgba(255, 255, 255, 0.28); font-size: 0.72rem; margin-bottom: 1.5rem;
+}
+
+/* Oversold alert */
+.lo-alert {
+  display: flex; align-items: center; gap: 0.7rem; padding: 0.9rem 1rem;
+  background: rgba(255, 61, 0, 0.1); border: 1px solid rgba(255, 61, 0, 0.3);
+  color: #ff8a65; font-size: 0.8rem; margin-bottom: 1.5rem;
+}
+.lo-alert svg { flex-shrink: 0; }
+
+/* KPIs */
+.lo-stats {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1px; background: rgba(255, 255, 255, 0.06); margin-bottom: 2rem;
+}
+.lo-stat { background: #141414; padding: 1.25rem; }
+.lo-stat-top { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.8rem; }
+.lo-stat-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; flex-shrink: 0;
+}
+.lo-stat-label {
+  color: rgba(255, 255, 255, 0.4); font-size: 0.66rem;
+  text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600;
+}
+.lo-stat-val { color: #fff; font-size: 2rem; font-weight: 900; line-height: 1; }
+
+/* Panels */
+.lo-panel { background: #141414; padding: 1.5rem; margin-bottom: 2px; }
+.lo-panel-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem;
+}
+.lo-panel-head h2 {
+  color: #fff; font-size: 0.8rem; font-weight: 800;
+  text-transform: uppercase; letter-spacing: 0.12em;
+}
+.lo-panel-head span { color: rgba(255, 255, 255, 0.35); font-size: 0.75rem; }
+.lo-link {
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  color: #ff3d00; font-size: 0.72rem; font-weight: 600; text-decoration: none;
+}
+
+/* Occupancy bar: sold as the track, checked-in on top */
+.lo-bar {
+  position: relative; height: 10px; background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+.lo-bar-fill { position: absolute; top: 0; left: 0; height: 100%; transition: width 0.5s ease; }
+.lo-bar-fill--sold { background: rgba(255, 152, 0, 0.35); }
+.lo-bar-fill--inside { background: #4caf50; }
+.lo-bar-legend {
+  display: flex; align-items: center; gap: 1.2rem; flex-wrap: wrap;
+  margin-top: 0.7rem; color: rgba(255, 255, 255, 0.4); font-size: 0.72rem;
+}
+.lo-bar-legend span { display: inline-flex; align-items: center; gap: 0.4rem; }
+.lo-key { width: 10px; height: 10px; display: inline-block; }
+.lo-key--inside { background: #4caf50; }
+.lo-key--sold { background: rgba(255, 152, 0, 0.35); }
+.lo-bar-rev { margin-left: auto; color: rgba(255, 255, 255, 0.55); }
+
+/* Check-in list */
+.lo-empty { color: rgba(255, 255, 255, 0.3); font-size: 0.82rem; }
+.lo-list { display: flex; flex-direction: column; gap: 1px; background: rgba(255, 255, 255, 0.04); }
+.lo-row {
+  display: grid; grid-template-columns: 1fr auto auto auto;
+  align-items: center; gap: 0.75rem;
+  background: #141414; padding: 0.7rem 0.25rem;
+}
+.lo-row-name { color: #fff; font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lo-row-tier {
+  padding: 0.15rem 0.5rem; background: rgba(255, 61, 0, 0.12); color: #ff6d3a;
+  font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+}
+.lo-row-code {
+  color: rgba(255, 255, 255, 0.3); font-size: 0.7rem; font-family: var(--font-mono, monospace);
+}
+.lo-row-time { color: rgba(255, 255, 255, 0.55); font-size: 0.78rem; font-weight: 600; }
+
+@media (max-width: 700px) {
+  .lo-row { grid-template-columns: 1fr auto; }
+  .lo-row-code { display: none; }
+  .lo-bar-rev { margin-left: 0; }
+}

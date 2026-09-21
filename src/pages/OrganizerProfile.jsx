@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { getUser, getEventsByOrganizer, getTicketsByEvent } from '../lib/db'
+import { getUser, getEventsByOrganizer } from '../lib/db'
 import { useAuth } from '../context/AuthContext'
 import { FiMapPin, FiCalendar, FiUsers, FiInstagram, FiGlobe, FiArrowRight, FiEdit } from 'react-icons/fi'
 import Button from '../components/ui/Button'
@@ -21,12 +21,10 @@ const OrganizerProfile = () => {
         setOrg(user)
         const evts = await getEventsByOrganizer(id)
         setEvents(evts)
-        let total = 0
-        for (const e of evts) {
-          const t = await getTicketsByEvent(e.id)
-          total += t.length + (e.ticketsSold || 0)
-        }
-        setTotalTickets(total)
+        // Public page: the ticket documents belong to their buyers and to this
+        // organizer, so a visitor cannot read them. The event's own counter is
+        // the public figure — and it was being double-counted before.
+        setTotalTickets(evts.reduce((sum, e) => sum + (e.ticketsSold || 0), 0))
       }
     }
     load()

@@ -6,6 +6,8 @@ import { useAuth } from '../../context/AuthContext'
 import { FiArrowLeft, FiCheck, FiMapPin, FiCalendar, FiClock, FiUsers, FiDollarSign, FiImage, FiLoader } from 'react-icons/fi'
 import Button from '../../components/ui/Button'
 import { useToast } from '../../components/ui/Toast'
+import VenueEditor from '../../components/venue/VenueEditor'
+import { VENUE_LAYOUT_VERSION } from '../../lib/db'
 import './CreateEvent.css'
 
 const GENRES = [
@@ -73,6 +75,7 @@ const EditEvent = () => {
           { name: 'Early Bird', price: '', qty: '' },
           { name: 'First Release', price: '', qty: '' },
         ],
+        venue: event.venue || null,
       })
       setLoading(false)
     }
@@ -121,6 +124,11 @@ const EditEvent = () => {
         imageUrl: finalImageUrl,
         minAge: parseInt(form.minAge) || 18,
         lineup: form.lineup.filter(a => a.name.trim()),
+        // Saving here means the organizer reviewed the venue: from now on it is
+        // theirs and the automatic template backfill leaves it alone.
+        venue: form.venue || null,
+        venueAuthored: !!form.venue,
+        venueVersion: VENUE_LAYOUT_VERSION,
       })
       navigate(`/organizer/event/${id}/analytics`)
       toast.success('¡Evento actualizado!')
@@ -263,6 +271,12 @@ const EditEvent = () => {
                   ))}
                 </div>
               </div>
+            </div>
+
+            {/* Venue experience */}
+            <div className="ce-step" style={{ marginTop: '2rem' }}>
+              <h2 className="ce-step-title">Experiencia en el venue</h2>
+              <VenueEditor value={form.venue} onChange={v => set('venue', v)} />
             </div>
 
             {/* Image */}

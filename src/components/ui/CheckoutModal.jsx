@@ -30,7 +30,7 @@ const formatExpiry = (v) => {
   return d.length >= 3 ? `${d.slice(0, 2)}/${d.slice(2)}` : d
 }
 
-const CheckoutModal = ({ isOpen, onClose, event, onPaid }) => {
+const CheckoutModal = ({ isOpen, onClose, event, tier = null, onPaid }) => {
   const [form, setForm] = useState({ name: '', number: '', expiry: '', cvc: '' })
   const [errors, setErrors] = useState({})
   const [status, setStatus] = useState('form') // form | processing | done
@@ -70,7 +70,9 @@ const CheckoutModal = ({ isOpen, onClose, event, onPaid }) => {
     onClose()
   }
 
-  const price = event?.price === 0 ? 'Gratis' : `$${event?.price}`
+  // When the organizer sells in phases, the amount comes from the phase on sale.
+  const amount = tier ? tier.price : event?.price
+  const price = amount === 0 ? 'Gratis' : `$${amount}`
 
   return (
     <Modal isOpen={isOpen} onClose={status === 'processing' ? () => {} : handleClose} title="Pago seguro" size="sm">
@@ -86,7 +88,9 @@ const CheckoutModal = ({ isOpen, onClose, event, onPaid }) => {
           <div className="co-summary">
             <div>
               <span className="co-summary-label">{event?.title}</span>
-              <span className="co-summary-sub">Entrada General · QR Digital</span>
+              <span className="co-summary-sub">
+                {tier ? `${tier.name} · QR Digital` : 'Entrada General · QR Digital'}
+              </span>
             </div>
             <span className="co-summary-price">{price}</span>
           </div>

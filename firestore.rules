@@ -12,18 +12,43 @@ service cloud.firestore {
       return isAuth() && request.auth.uid == userId;
     }
 
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
     function isOrganizer() {
-      return isAuth() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'organizer';
+      return isAuth() && userDoc().role == 'organizer';
+    }
+
+    // Organizer of a specific event (used by ticket check-in and reads).
+    function ownsEvent(eventId) {
+      return isAuth()
+        && exists(/databases/$(database)/documents/events/$(eventId))
+        && get(/databases/$(database)/documents/events/$(eventId)).data.organizerId == request.auth.uid;
+    }
+
+    function changedKeys() {
+      return request.resource.data.diff(resource.data).affectedKeys();
     }
 
     // ── Users ──
     match /users/{userId} {
-      // Anyone can read user profiles (needed for organizer pages, going list, etc.)
+      // Public read: organizer pages, attendee lists and the "going" list all
+      // need to resolve display names.
       allow read: if true;
-      // Users can create their own profile
-      allow create: if isAuth() && request.auth.uid == userId;
-      // Users can update only their own profile
-      allow update: if isOwner(userId);
+
+      // You can only create your own profile, only with a known role, and never
+      // with a password field (passwords belong to Firebase Auth, not Firestore).
+      allow create: if isOwner(userId)
+        && request.resource.data.role in ['user', 'organizer']
+        && !('password' in request.resource.data);
+
+      // You can update your own profile but not promote yourself: the role is
+      // immutable from the client, and no password may be written.
+      allow update: if isOwner(userId)
+        && request.resource.data.role == resource.data.role
+        && !('password' in request.resource.data);
+
       allow delete: if false;
     }
 
@@ -31,36 +56,57 @@ service cloud.firestore {
     match /events/{eventId} {
       // Anyone can read events (public listing)
       allow read: if true;
-      // Only organizers can create events
-      allow create: if isOrganizer();
-      // Only the event's organizer can update/delete
-      allow update: if isAuth() && resource.data.organizerId == request.auth.uid;
+
+      // Only organizers can create, and only as themselves
+      allow create: if isOrganizer()
+        && request.resource.data.organizerId == request.auth.uid;
+
+      // The owning organizer can edit freely. Any authenticated buyer may touch
+      // `ticketsSold` alone, which is what a purchase or a cancellation does.
+      allow update: if isAuth() && (
+        resource.data.organizerId == request.auth.uid
+        || changedKeys().hasOnly(['ticketsSold', 'tierSold'])
+      );
+
       allow delete: if isAuth() && resource.data.organizerId == request.auth.uid;
     }
 
     // ── Tickets ──
+    // Reads are scoped: the app queries tickets by userId or by eventId, never
+    // the whole collection, so these per-document rules hold for every query.
     match /tickets/{ticketId} {
-      // Users can read their own tickets, organizers can read tickets for their events
-      allow read: if isAuth();
-      // Authenticated users can create tickets (purchase)
-      allow create: if isAuth();
-      // Update for validation (marking as used) — organizer of the event
-      allow update: if isAuth();
-      // Users can delete their own tickets (cancellation)
-      allow delete: if isAuth();
+      allow read: if isAuth() && (
+        resource.data.userId == request.auth.uid
+        || ownsEvent(resource.data.eventId)
+      );
+
+      // You buy tickets for yourself, and the QR/status are set by the app.
+      allow create: if isAuth()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.status == 'valid';
+
+      // Check-in: only the organizer of the event, and only the check-in fields.
+      allow update: if ownsEvent(resource.data.eventId)
+        && changedKeys().hasOnly(['status', 'usedAt']);
+
+      // Cancellation: your own ticket, and only while it has not been used.
+      allow delete: if isAuth() && (
+        (resource.data.userId == request.auth.uid && resource.data.status != 'used')
+        || ownsEvent(resource.data.eventId)
+      );
     }
 
     // ── Reviews ──
     match /reviews/{reviewId} {
       allow read: if true;
-      allow create: if isAuth();
+      allow create: if isAuth() && request.resource.data.userId == request.auth.uid;
       allow update, delete: if isAuth() && resource.data.userId == request.auth.uid;
     }
 
     // ── Going ──
     match /going/{goingId} {
       allow read: if true;
-      allow create: if isAuth();
+      allow create: if isAuth() && request.resource.data.userId == request.auth.uid;
       allow delete: if isAuth() && resource.data.userId == request.auth.uid;
     }
 
@@ -68,7 +114,8 @@ service cloud.firestore {
     match /notifications/{notifId} {
       // Users can only read their own notifications
       allow read: if isAuth() && resource.data.userId == request.auth.uid;
-      allow create: if isAuth();
+      // Notifications are written for yourself (purchases, reminders)
+      allow create: if isAuth() && request.resource.data.userId == request.auth.uid;
       allow update: if isAuth() && resource.data.userId == request.auth.uid;
       allow delete: if false;
     }
@@ -76,7 +123,8 @@ service cloud.firestore {
     // ── Subscriptions ──
     match /subscriptions/{subId} {
       allow read: if isAuth();
-      allow create: if isAuth();
+      allow create: if isAuth() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuth() && resource.data.userId == request.auth.uid;
       allow delete: if isAuth() && resource.data.userId == request.auth.uid;
     }
   }

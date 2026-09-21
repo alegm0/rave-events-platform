@@ -4,7 +4,7 @@
 import { db } from '../firebase/config'
 import {
   collection, doc, getDoc, getDocs, addDoc, updateDoc, deleteDoc,
-  query, where, orderBy, setDoc, serverTimestamp, writeBatch, deleteField
+  query, where, orderBy, setDoc, serverTimestamp, writeBatch, deleteField, increment
 } from 'firebase/firestore'
 
 // ── Helper ──
@@ -30,6 +30,7 @@ const invalidateCache = (key) => {
   cache[key] = null
   cacheTime[key] = 0
   if (key === 'tickets') invalidateTicketQueries()
+  if (key === 'notifications') invalidateNotifications()
 }
 
 // ── Generic Firestore helpers ──
@@ -71,6 +72,26 @@ export const loginDemoUser = async (email, password) => {
   const user = users.find(u => u.email === email && u.demo === true)
   if (!user || password !== DEMO_PASSWORD) throw new Error('Credenciales incorrectas')
   return user
+}
+
+// Emails of the seeded fixtures. Databases seeded by an older version have no
+// `demo` flag, so we set it on the accounts we know before dropping their
+// stored password — otherwise the demo logins would stop working.
+const DEMO_EMAILS = [
+  'demo@rave.com', 'maria@rave.com', 'carlos@gmail.com', 'valentina@gmail.com',
+  'santiago@gmail.com', 'camila@gmail.com',
+  'amnesia@rave.com', 'hi@rave.com', 'ushuaia@rave.com',
+]
+
+export const ensureDemoFlags = async () => {
+  const users = await getCollection('users')
+  const pending = users.filter(u => u.demo !== true && DEMO_EMAILS.includes(u.email))
+  if (pending.length === 0) return 0
+  const batch = writeBatch(db)
+  pending.forEach(u => batch.update(doc(db, 'users', u.id), { demo: true }))
+  await batch.commit()
+  invalidateCache('users')
+  return pending.length
 }
 
 // One-off cleanup: earlier versions stored plaintext passwords on the user
@@ -182,17 +203,21 @@ export const getEventAttendees = async (eventId) => {
 // ── Pricing tiers ──
 // An event can be sold at a single price or in ordered phases ("Early Bird",
 // "First Release", ...). Only one phase is on sale at a time: the first one with
-// stock left. Everything here is derived from the tickets already sold, so the
-// organizer's configuration is what actually drives the sale.
+// stock left. The phase configured by the organizer is what drives the price.
 export const hasTiers = (event) =>
   event?.pricingMode === 'tiers' && Array.isArray(event.tiers) && event.tiers.length > 0
 
-export const getTierStatus = (event, tickets = []) => {
+// `tickets` is optional: organizer views pass the real ticket documents, public
+// views pass nothing and we fall back to the aggregate counter stored on the
+// event (`tierSold`), which is the only figure a visitor is allowed to read.
+export const getTierStatus = (event, tickets = null) => {
   if (!hasTiers(event)) return []
   let activeFound = false
   return event.tiers.map((tier, i) => {
     const qty = parseInt(tier.qty) || 0
-    const sold = tickets.filter(t => (t.tierName || '') === tier.name).length
+    const sold = Array.isArray(tickets)
+      ? tickets.filter(t => (t.tierName || '') === tier.name).length
+      : (event.tierSold?.[tier.name] || 0)
     const remaining = qty > 0 ? Math.max(0, qty - sold) : null // null = unlimited
     const soldOut = remaining === 0
     const active = !soldOut && !activeFound
@@ -210,7 +235,7 @@ export const getTierStatus = (event, tickets = []) => {
   })
 }
 
-export const getActiveTier = (event, tickets = []) =>
+export const getActiveTier = (event, tickets = null) =>
   getTierStatus(event, tickets).find(t => t.active) || null
 
 // Revenue from what people actually paid. Older tickets have no `pricePaid`,
@@ -245,13 +270,13 @@ export const createTicket = async (ticketData) => {
   }
 
   // Price is resolved here, never taken from the UI: the tier must be the one
-  // currently on sale and it must still have stock.
+  // currently on sale and it must still have stock. Phase stock comes from the
+  // aggregate counter on the event, because a buyer cannot read other people's
+  // tickets (see firestore.rules).
   let pricePaid = event.price || 0
   let resolvedTier = null
   if (hasTiers(event)) {
-    const eventTickets = await getTicketsByEvent(eventId, { fresh: true })
-    const tiers = getTierStatus(event, eventTickets)
-    const active = tiers.find(t => t.active)
+    const active = getActiveTier(event)
     if (!active) throw new Error('No hay fases de precio disponibles')
     if (tierName && tierName !== active.name) {
       throw new Error(`La fase "${tierName}" ya no está disponible. Ahora se vende "${active.name}".`)
@@ -272,10 +297,16 @@ export const createTicket = async (ticketData) => {
   }
   await setDoc(doc(db, 'tickets', id), ticket)
 
-  // Update event ticket count
-  await updateDoc(doc(db, 'events', eventId), {
-    ticketsSold: sold + 1
-  })
+  // Public counters on the event: total sold and sold-per-phase. These are the
+  // only figures visitors can read, and the only fields a buyer may write.
+  const counters = { ticketsSold: increment(1) }
+  if (resolvedTier) {
+    counters.tierSold = {
+      ...(event.tierSold || {}),
+      [resolvedTier]: (event.tierSold?.[resolvedTier] || 0) + 1,
+    }
+  }
+  await updateDoc(doc(db, 'events', eventId), counters)
   invalidateCache('tickets')
   invalidateCache('events')
   return ticket
@@ -320,12 +351,17 @@ export const cancelTicket = async (ticketId) => {
 
   await deleteDoc(doc(db, 'tickets', ticketId))
 
-  // Decrement event ticket count
+  // Give the seat back: total counter and, if it was sold in a phase, that phase
   const event = await getEvent(ticket.eventId)
   if (event) {
-    await updateDoc(doc(db, 'events', ticket.eventId), {
-      ticketsSold: Math.max(0, (event.ticketsSold || 1) - 1)
-    })
+    const counters = { ticketsSold: Math.max(0, (event.ticketsSold || 1) - 1) }
+    if (ticket.tierName) {
+      counters.tierSold = {
+        ...(event.tierSold || {}),
+        [ticket.tierName]: Math.max(0, (event.tierSold?.[ticket.tierName] || 1) - 1),
+      }
+    }
+    await updateDoc(doc(db, 'events', ticket.eventId), counters)
   }
   invalidateCache('tickets')
   invalidateCache('events')
@@ -430,9 +466,31 @@ export const addNotification = async (userId, notification) => {
   return notif
 }
 
+// Notifications are private to their recipient, so — like tickets — they are
+// read with a scoped query instead of a full-collection scan.
+const notifCache = {}
+const notifCacheTime = {}
+const NOTIF_CACHE_TTL = 15000
+
+const queryNotifications = async (userId, { fresh = false } = {}) => {
+  if (!userId) return []
+  if (!fresh && notifCache[userId] && (Date.now() - (notifCacheTime[userId] || 0)) < NOTIF_CACHE_TTL) {
+    return notifCache[userId]
+  }
+  const snap = await getDocs(query(collection(db, 'notifications'), where('userId', '==', userId)))
+  const data = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+  notifCache[userId] = data
+  notifCacheTime[userId] = Date.now()
+  return data
+}
+
+const invalidateNotifications = () => {
+  Object.keys(notifCache).forEach(k => { delete notifCache[k]; delete notifCacheTime[k] })
+}
+
 export const getNotifications = async (userId) => {
-  const notifs = await getCollection('notifications')
-  return notifs.filter(n => n.userId === userId).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+  const notifs = await queryNotifications(userId)
+  return [...notifs].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
 }
 
 export const markNotificationRead = async (id) => {
@@ -441,18 +499,18 @@ export const markNotificationRead = async (id) => {
 }
 
 export const markAllRead = async (userId) => {
-  const notifs = await getCollection('notifications')
+  const notifs = await queryNotifications(userId, { fresh: true })
+  const unread = notifs.filter(n => !n.read)
+  if (unread.length === 0) return
   const batch = writeBatch(db)
-  notifs.filter(n => n.userId === userId && !n.read).forEach(n => {
-    batch.update(doc(db, 'notifications', n.id), { read: true })
-  })
+  unread.forEach(n => batch.update(doc(db, 'notifications', n.id), { read: true }))
   await batch.commit()
   invalidateCache('notifications')
 }
 
 export const getUnreadCount = async (userId) => {
-  const notifs = await getCollection('notifications')
-  return notifs.filter(n => n.userId === userId && !n.read).length
+  const notifs = await queryNotifications(userId)
+  return notifs.filter(n => !n.read).length
 }
 
 // ── Subscriptions (notify me) ──

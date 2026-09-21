@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { validateTicket, getEvent, getTicketsByEvent } from '../../lib/db'
 import { useAuth } from '../../context/AuthContext'
-import { FiCheckCircle, FiXCircle, FiCamera, FiType, FiUsers, FiArrowLeft } from 'react-icons/fi'
+import { FiCheckCircle, FiXCircle, FiCamera, FiType, FiUsers, FiArrowLeft, FiActivity } from 'react-icons/fi'
 import Button from '../../components/ui/Button'
 import { useToast } from '../../components/ui/Toast'
 import './QRScanner.css'
@@ -170,7 +170,10 @@ const QRScanner = () => {
       {/* Header */}
       <div className="scanner-header">
         <div className="container">
-          <Link to="/organizer/dashboard" className="scanner-back"><FiArrowLeft /> Dashboard</Link>
+          <div className="scanner-nav">
+            <Link to="/organizer/dashboard" className="scanner-back"><FiArrowLeft /> Dashboard</Link>
+            <Link to={`/organizer/event/${eventId}/live`} className="scanner-back"><FiActivity /> Operación en vivo</Link>
+          </div>
           <div className="scanner-event-info">
             <h1 className="scanner-title">Scanner de Entrada</h1>
             {event && <p className="scanner-event-name">{event.title}</p>}

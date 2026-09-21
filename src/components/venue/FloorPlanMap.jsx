@@ -14,7 +14,10 @@ import './floorplans/floorplan.css'
 const PLANS = {
   warehouse: { Plan: WarehouseFloorPlan, anchors: warehouseAnchors, route: warehouseRoute },
 }
-const detect = (venue) => ((venue?.setting || '').toLowerCase().includes('warehouse') ? 'warehouse' : null)
+const detect = (venue) => {
+  if (venue?.kind && PLANS[venue.kind]) return venue.kind
+  return (venue?.setting || '').toLowerCase().includes('warehouse') ? 'warehouse' : null
+}
 
 const FloorPlanMap = ({ venue, origin, destination, compact = false }) => {
   const key = detect(venue)

@@ -112,12 +112,18 @@ const TicketDetail = () => {
                 <span>{new Date(ticket.purchaseDate).toLocaleDateString('es', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
               </div>
               <div className="td-detail-row">
-                <span>Precio</span>
-                <span>{event?.price === 0 ? 'Gratis' : `$${event?.price}`}</span>
+                <span>Pagado</span>
+                <span>
+                  {/* What this attendee actually paid, not the current price */}
+                  {(() => {
+                    const paid = typeof ticket.pricePaid === 'number' ? ticket.pricePaid : event?.price
+                    return paid === 0 ? 'Gratis' : `$${paid}`
+                  })()}
+                </span>
               </div>
               <div className="td-detail-row">
                 <span>Tipo</span>
-                <span>Entrada General</span>
+                <span>{ticket.tierName || 'Entrada General'}</span>
               </div>
               {event?.minAge && (
                 <div className="td-detail-row">

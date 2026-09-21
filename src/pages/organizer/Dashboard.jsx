@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { getEventsByOrganizer, getTicketsByEvent } from '../../lib/db'
+import { getEventsByOrganizer, getTicketsByEvent, sumRevenue } from '../../lib/db'
 import { useAuth } from '../../context/AuthContext'
-import { FiCalendar, FiDollarSign, FiUsers, FiPlus, FiBarChart2, FiArrowRight, FiZap, FiCrosshair, FiMapPin, FiTrendingUp } from 'react-icons/fi'
+import { FiCalendar, FiDollarSign, FiUsers, FiPlus, FiBarChart2, FiArrowRight, FiZap, FiCrosshair, FiMapPin, FiTrendingUp, FiActivity } from 'react-icons/fi'
 import Button from '../../components/ui/Button'
 import './Dashboard.css'
 
@@ -21,9 +21,11 @@ const Dashboard = () => {
       const enriched = []
       for (const e of evts) {
         const t = await getTicketsByEvent(e.id)
+        // Revenue from what each attendee actually paid (phases can differ)
+        const revenue = sumRevenue(t, e)
         tix += t.length
-        rev += t.length * (e.price || 0)
-        enriched.push({ ...e, tickets: t.length, revenue: t.length * (e.price || 0), pct: e.capacity ? Math.round((t.length / e.capacity) * 100) : 0 })
+        rev += revenue
+        enriched.push({ ...e, tickets: t.length, revenue, pct: e.capacity ? Math.round((t.length / e.capacity) * 100) : 0 })
       }
       setEventsWithTickets(enriched)
       setStats({
@@ -234,6 +236,7 @@ const Dashboard = () => {
                   </div>
                   <div className="dash-featured-actions">
                     <Link to={`/organizer/event/${topEvent.id}/analytics`}><Button variant="ghost" size="sm" icon={<FiBarChart2 />}>Analytics</Button></Link>
+                    <Link to={`/organizer/event/${topEvent.id}/live`}><Button variant="ghost" size="sm" icon={<FiActivity />}>En vivo</Button></Link>
                     <Link to={`/organizer/scanner/${topEvent.id}`}><Button size="sm" icon={<FiCrosshair />}>Scanner</Button></Link>
                   </div>
                 </div>

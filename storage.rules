@@ -1,0 +1,36 @@
+rules_version = '2';
+
+// Event and brand images. Uploads are written under a folder named after the
+// uploader's uid (see src/lib/storage.js), so a user can only write their own
+// prefix. Reads are public because event covers are shown on public listings.
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    function isImage() {
+      return request.resource.contentType.matches('image/.*')
+        && request.resource.size < 5 * 1024 * 1024;
+    }
+
+    // Event covers: events/{uid}/{file}
+    match /events/{userId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAuth() && request.auth.uid == userId && isImage();
+    }
+
+    // Brand assets: brands/{uid}/logo/{file}, brands/{uid}/cover/{file}
+    match /brands/{userId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAuth() && request.auth.uid == userId && isImage();
+    }
+
+    // Nothing else is writable from the client.
+    match /{allPaths=**} {
+      allow read: if true;
+      allow write: if false;
+    }
+  }
+}

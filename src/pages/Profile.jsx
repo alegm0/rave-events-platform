@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { getTicketsByUser, getEventsByOrganizer, getTicketsByEvent, getEvent } from '../lib/db'
+import { getTicketsByUser, getEventsByOrganizer, getTicketsByEvent, getEvent, sumRevenue } from '../lib/db'
 import { FiUser, FiMail, FiCalendar, FiPlus, FiBarChart2, FiUsers, FiDollarSign, FiLogOut, FiArrowRight } from 'react-icons/fi'
 import Button from '../components/ui/Button'
 import ComfortProfile from '../components/ui/ComfortProfile'
@@ -29,7 +29,7 @@ const Profile = () => {
           const t = await getTicketsByEvent(e.id)
           counts[e.id] = t.length
           tix += t.length
-          rev += t.length * (e.price || 0)
+          rev += sumRevenue(t, e)
         }
         setEventTicketCounts(counts)
         setOrgTickets(tix)

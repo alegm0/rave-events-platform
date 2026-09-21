@@ -124,3 +124,6 @@
   .scanner-live-stats { align-self: flex-start; }
   .scanner-manual-form { flex-direction: column; }
 }
+
+/* Header nav: dashboard + live ops */
+.scanner-nav { display: flex; flex-direction: column; gap: 0.4rem; }

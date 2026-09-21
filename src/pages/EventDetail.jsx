@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { getEvent, getEvents, createTicket, getTicketsByEvent, getUser, getTicketsByUser, addNotification, getReviewsByEvent, addReview, getAverageRating, markGoing, getGoingCount, isGoing, getGoingUsers } from '../lib/db'
+import { getEvent, getEvents, createTicket, getUser, getTicketsByUser, addNotification, getReviewsByEvent, addReview, getAverageRating, markGoing, getGoingCount, isGoing, getGoingUsers, hasTiers, getTierStatus } from '../lib/db'
 import { useAuth } from '../context/AuthContext'
 import { FiCalendar, FiMapPin, FiClock, FiUsers, FiArrowLeft, FiShare2, FiCheck, FiMusic, FiArrowRight } from 'react-icons/fi'
 import Button from '../components/ui/Button'
@@ -21,7 +21,6 @@ const EventDetail = () => {
   const [purchasing, setPurchasing] = useState(false)
   const [purchased, setPurchased] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
-  const [tickets, setTickets] = useState([])
   const [alreadyOwned, setAlreadyOwned] = useState(false)
   const [relatedEvents, setRelatedEvents] = useState([])
   const [copied, setCopied] = useState(false)
@@ -38,7 +37,6 @@ const EventDetail = () => {
       const e = await getEvent(id)
       setEvent(e)
       if (e) {
-        setTickets(await getTicketsByEvent(id))
         const all = (await getEvents()).filter(ev => ev.id !== id && ev.genre === e.genre).slice(0, 3)
         setRelatedEvents(all)
         // Check if user already owns a ticket
@@ -71,9 +69,15 @@ const EventDetail = () => {
   }
 
   // Called by the checkout modal after a (simulated) successful payment.
-  // Throws propagate so the modal can show duplicate / sold-out errors.
+  // Throws propagate so the modal can show duplicate / sold-out / tier errors.
+  // The tier name is a hint: the data layer re-resolves which phase is on sale
+  // and what it costs, so a stale price in the UI can never be charged.
   const completePurchase = async () => {
-    await createTicket({ eventId: id, userId: currentUser.id })
+    await createTicket({
+      eventId: id,
+      userId: currentUser.id,
+      tierName: activeTier?.name || null,
+    })
     await markGoing(currentUser.id, id)
     await addNotification(currentUser.id, {
       type: 'purchase',
@@ -84,6 +88,8 @@ const EventDetail = () => {
     })
     setPurchased(true)
     setAlreadyOwned(true)
+    // Re-read the event so the phase counters and the capacity bar reflect the sale
+    setEvent(await getEvent(id))
     toast.success('¡Ticket comprado exitosamente!')
   }
 
@@ -96,10 +102,16 @@ const EventDetail = () => {
 
   if (!event) return <div className="ed-loading"><div className="loader"></div></div>
 
-  const soldCount = event.ticketsSold || tickets.length
+  const soldCount = event.ticketsSold || 0
   const capacity = event.capacity || 500
   const available = capacity - soldCount
   const pct = Math.round((soldCount / capacity) * 100)
+  // Pricing phases configured by the organizer. Only one is on sale at a time.
+  const tiered = hasTiers(event)
+  const tiers = tiered ? getTierStatus(event) : []
+  const activeTier = tiers.find(t => t.active) || null
+  const currentPrice = activeTier ? activeTier.price : event.price
+  const allTiersSoldOut = tiered && !activeTier
   const isOrg = userProfile?.role === 'organizer' && event.organizerId === currentUser?.id
   const endTime = (() => {
     if (!event.date || !event.time) return null
@@ -343,9 +355,34 @@ const EventDetail = () => {
               )}
 
               <div className="ed-price-row">
-                <div className="ed-price">{event.price === 0 ? 'Gratis' : `$${event.price}`}</div>
-                {event.price > 0 && <span className="ed-price-label">por persona</span>}
+                <div className="ed-price">{currentPrice === 0 ? 'Gratis' : `$${currentPrice}`}</div>
+                {currentPrice > 0 && (
+                  <span className="ed-price-label">
+                    {activeTier ? activeTier.name : 'por persona'}
+                  </span>
+                )}
               </div>
+
+              {/* Pricing phases — the organizer's tiers, sold in order */}
+              {tiered && (
+                <div className="ed-tiers">
+                  {tiers.map(t => (
+                    <div key={t.name} className={`ed-tier ${t.active ? 'is-active' : ''} ${t.soldOut ? 'is-soldout' : ''}`}>
+                      <div className="ed-tier-main">
+                        <strong>{t.name}</strong>
+                        <span>
+                          {t.soldOut
+                            ? 'Agotada'
+                            : t.active
+                              ? (t.remaining !== null ? `${t.remaining} disponibles` : 'En venta')
+                              : 'Próxima fase'}
+                        </span>
+                      </div>
+                      <span className="ed-tier-price">{t.price === 0 ? 'Gratis' : `$${t.price}`}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               <div className="ed-ticket-meta">
                 <div className="ed-ticket-meta-item">
@@ -367,9 +404,10 @@ const EventDetail = () => {
                   </div>
                   <Link to="/my-tickets"><Button fullWidth variant="ghost">Ver mis tickets</Button></Link>
                 </div>
-              ) : available > 0 ? (
+              ) : available > 0 && !allTiersSoldOut ? (
                 <Button fullWidth size="lg" onClick={handlePurchase} disabled={purchasing || isOrg}>
-                  {purchasing ? 'Procesando...' : isOrg ? 'No puedes comprar tu propio evento' : 'Comprar Ticket'}
+                  {purchasing ? 'Procesando...' : isOrg ? 'No puedes comprar tu propio evento'
+                    : activeTier ? `Comprar ${activeTier.name}` : 'Comprar Ticket'}
                 </Button>
               ) : (
                 <Button fullWidth size="lg" disabled>Agotado</Button>
@@ -396,6 +434,7 @@ const EventDetail = () => {
         isOpen={showConfirm}
         onClose={() => setShowConfirm(false)}
         event={event}
+        tier={activeTier}
         onPaid={completePurchase}
       />
 

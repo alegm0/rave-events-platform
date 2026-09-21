@@ -6,6 +6,8 @@ import { useAuth } from '../../context/AuthContext'
 import { FiArrowRight, FiArrowLeft, FiCheck, FiMapPin, FiCalendar, FiClock, FiUsers, FiDollarSign, FiImage, FiMusic, FiLoader } from 'react-icons/fi'
 import Button from '../../components/ui/Button'
 import { useToast } from '../../components/ui/Toast'
+import VenueEditor from '../../components/venue/VenueEditor'
+import { VENUE_LAYOUT_VERSION } from '../../lib/db'
 import './CreateEvent.css'
 
 const GENRES = [
@@ -56,6 +58,7 @@ const CreateEvent = () => {
       { name: 'Early Bird', price: '', qty: '' },
       { name: 'First Release', price: '', qty: '' },
     ],
+    venue: null,
   })
 
   const set = (field, value) => {
@@ -90,7 +93,8 @@ const CreateEvent = () => {
     return Object.keys(e).length === 0
   }
 
-  const nextStep = () => { if (validateStep(step)) setStep(s => Math.min(s + 1, 4)) }
+  const LAST_STEP = 5
+  const nextStep = () => { if (validateStep(step)) setStep(s => Math.min(s + 1, LAST_STEP)) }
   const prevStep = () => setStep(s => Math.max(s - 1, 1))
 
   const handleSubmit = async () => {
@@ -127,6 +131,11 @@ const CreateEvent = () => {
         imageUrl: finalImageUrl,
         minAge: parseInt(form.minAge) || 18,
         lineup: form.lineup.filter(a => a.name.trim()),
+        // Venue declared by the organizer. `venueAuthored` stops the automatic
+        // template backfill from overwriting it with a guessed layout.
+        venue: form.venue || null,
+        venueAuthored: !!form.venue,
+        venueVersion: VENUE_LAYOUT_VERSION,
         organizerId: currentUser.id,
         status: 'active',
         ticketsSold: 0,
@@ -148,7 +157,7 @@ const CreateEvent = () => {
           <div className="ce-form-side">
             {/* Progress */}
             <div className="ce-progress">
-              {['Información', 'Fecha y lugar', 'Tickets', 'Imagen'].map((label, i) => (
+              {['Información', 'Fecha y lugar', 'Tickets', 'Imagen', 'Venue'].map((label, i) => (
                 <button key={i} type="button"
                   className={`ce-prog-step ${step > i + 1 ? 'done' : ''} ${step === i + 1 ? 'active' : ''}`}
                   onClick={() => { if (step > i + 1 || (i + 1 <= step)) setStep(i + 1) }}>
@@ -502,13 +511,25 @@ const CreateEvent = () => {
               </div>
             )}
 
+            {/* Step 5: Venue experience */}
+            {step === 5 && (
+              <div className="ce-step">
+                <h2 className="ce-step-title">Experiencia en el venue</h2>
+                <p className="ce-step-desc">
+                  El mapa, los servicios y la accesibilidad que verán tus asistentes. Opcional, pero sin
+                  esto tu evento no tendrá mapa ni Rave Mode.
+                </p>
+                <VenueEditor value={form.venue} onChange={v => set('venue', v)} />
+              </div>
+            )}
+
             {/* Navigation */}
             <div className="ce-nav">
               {step > 1 && (
                 <Button variant="ghost" onClick={prevStep} icon={<FiArrowLeft />}>Anterior</Button>
               )}
               <div style={{ flex: 1 }}></div>
-              {step < 4 ? (
+              {step < LAST_STEP ? (
                 <Button onClick={nextStep}>Siguiente <FiArrowRight /></Button>
               ) : (
                 <Button onClick={handleSubmit} size="lg" disabled={uploading}>

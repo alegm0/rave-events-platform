@@ -6,9 +6,21 @@ import {
   signOut,
   onAuthStateChanged
 } from 'firebase/auth'
-import { createUser, getUser, updateUser, seedData, backfillVenues, ensureFeaturedEvents, processSubscriptionReminders, loginUser as loginUserFromDb } from '../lib/db'
+import {
+  createUser, getUser, updateUser, seedData, backfillVenues, ensureFeaturedEvents,
+  processSubscriptionReminders, loginDemoUser, purgeStoredPasswords
+} from '../lib/db'
 
 const AuthContext = createContext()
+
+// Firebase Auth error codes mapped to messages the user can act on.
+const REGISTER_ERRORS = {
+  'auth/email-already-in-use': 'El correo ya está registrado. Intenta iniciar sesión.',
+  'auth/invalid-email': 'El correo no es válido.',
+  'auth/weak-password': 'La contraseña debe tener al menos 6 caracteres.',
+  'auth/network-request-failed': 'Sin conexión. Revisa tu red e inténtalo de nuevo.',
+  'auth/operation-not-allowed': 'El registro con correo y contraseña está desactivado en Firebase.'
+}
 
 export const useAuth = () => {
   const context = useContext(AuthContext)
@@ -26,6 +38,10 @@ export const AuthProvider = ({ children }) => {
     seedData()
       .then(() => backfillVenues())
       .then(() => ensureFeaturedEvents())
+      // Strip any plaintext `password` field left behind by older versions. The
+      // users collection is world-readable (see firestore.rules), so this runs
+      // on every boot until no document carries the field.
+      .then(() => purgeStoredPasswords())
       .catch(() => {})
 
     // Listen to Firebase Auth state
@@ -80,27 +96,11 @@ export const AuthProvider = ({ children }) => {
       setUserProfile(userData)
       return userData
     } catch (firebaseError) {
-      // If email already in Firebase Auth, throw a clear error
-      if (firebaseError.code === 'auth/email-already-in-use') {
-        throw new Error('El correo ya está registrado. Intenta iniciar sesión.')
-      }
-
-      // Fallback for demo: create user in Firestore only
-      try {
-        const userData = {
-          email, password, displayName, role,
-          favorites: [],
-          stats: { eventsAttended: 0, totalSpent: 0 }
-        }
-        const user = await createUser(userData)
-        localStorage.setItem('rave_currentUser', user.id)
-        setCurrentUser(user)
-        setUserProfile(user)
-        return user
-      } catch (dbError) {
-        // If Firestore also says email exists
-        throw new Error(dbError.message || 'Error al crear la cuenta')
-      }
+      // Registration goes through Firebase Auth only. There used to be a
+      // Firestore-only fallback here, but it wrote the password in plaintext to
+      // a world-readable document, so it is gone: a failed signup is now a
+      // failed signup rather than a silently insecure account.
+      throw new Error(REGISTER_ERRORS[firebaseError.code] || 'Error al crear la cuenta. Inténtalo de nuevo.')
     }
   }
 
@@ -118,8 +118,8 @@ export const AuthProvider = ({ children }) => {
       // Fallback: check Firestore directly (for demo accounts)
     }
 
-    // Fallback login for seeded demo accounts
-    const user = await loginUserFromDb(email, password)
+    // Fallback login for seeded demo accounts (flagged `demo: true` in Firestore)
+    const user = await loginDemoUser(email, password)
     localStorage.setItem('rave_currentUser', user.id)
     setCurrentUser(user)
     setUserProfile(user)

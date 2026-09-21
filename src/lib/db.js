@@ -4,7 +4,7 @@
 import { db } from '../firebase/config'
 import {
   collection, doc, getDoc, getDocs, addDoc, updateDoc, deleteDoc,
-  query, where, orderBy, setDoc, serverTimestamp, writeBatch
+  query, where, orderBy, setDoc, serverTimestamp, writeBatch, deleteField
 } from 'firebase/firestore'
 
 // ── Helper ──
@@ -60,11 +60,30 @@ export const createUser = async (userData) => {
   return user
 }
 
-export const loginUser = async (email, password) => {
+// ── Demo accounts ──
+// The seeded accounts are public fixtures for the demo, not real users: they are
+// flagged `demo: true` and share this well-known password, which lives in code
+// and is never stored in Firestore. Real accounts always go through Firebase Auth.
+export const DEMO_PASSWORD = 'demo123'
+
+export const loginDemoUser = async (email, password) => {
   const users = await getCollection('users')
-  const user = users.find(u => u.email === email && u.password === password)
-  if (!user) throw new Error('Credenciales incorrectas')
+  const user = users.find(u => u.email === email && u.demo === true)
+  if (!user || password !== DEMO_PASSWORD) throw new Error('Credenciales incorrectas')
   return user
+}
+
+// One-off cleanup: earlier versions stored plaintext passwords on the user
+// document, which is readable by anyone. Remove the field wherever it survives.
+export const purgeStoredPasswords = async () => {
+  const users = await getCollection('users')
+  const withPassword = users.filter(u => u.password !== undefined)
+  if (withPassword.length === 0) return 0
+  const batch = writeBatch(db)
+  withPassword.forEach(u => batch.update(doc(db, 'users', u.id), { password: deleteField() }))
+  await batch.commit()
+  invalidateCache('users')
+  return withPassword.length
 }
 
 export const getUser = async (id) => {
@@ -634,7 +653,7 @@ const matchTemplateToVenue = (venue) => {
 const IBIZA_ORGANIZERS = [
   {
     id: 'org-ibiza-amnesia',
-    email: 'amnesia@rave.com', password: 'demo123', displayName: 'Amnesia Ibiza', role: 'organizer',
+    email: 'amnesia@rave.com', demo: true, displayName: 'Amnesia Ibiza', role: 'organizer',
     createdAt: '2024-01-01T00:00:00.000Z',
     brand: {
       name: 'Amnesia Ibiza',
@@ -646,7 +665,7 @@ const IBIZA_ORGANIZERS = [
   },
   {
     id: 'org-hi-ibiza',
-    email: 'hi@rave.com', password: 'demo123', displayName: 'Hï Ibiza', role: 'organizer',
+    email: 'hi@rave.com', demo: true, displayName: 'Hï Ibiza', role: 'organizer',
     createdAt: '2024-01-01T00:00:00.000Z',
     brand: {
       name: 'Hï Ibiza',
@@ -658,7 +677,7 @@ const IBIZA_ORGANIZERS = [
   },
   {
     id: 'org-ushuaia',
-    email: 'ushuaia@rave.com', password: 'demo123', displayName: 'Ushuaïa Ibiza', role: 'organizer',
+    email: 'ushuaia@rave.com', demo: true, displayName: 'Ushuaïa Ibiza', role: 'organizer',
     createdAt: '2024-01-01T00:00:00.000Z',
     brand: {
       name: 'Ushuaïa Ibiza',
@@ -815,7 +834,7 @@ export const seedData = async () => {
   const demoOrg = {
     id: 'demo-org',
     email: 'demo@rave.com',
-    password: 'demo123',
+    demo: true,
     displayName: 'NOCTURN Collective',
     role: 'organizer',
     createdAt: '2025-06-01T00:00:00.000Z',
@@ -834,11 +853,11 @@ export const seedData = async () => {
 
   // Create demo ravers
   const ravers = [
-    { id: 'demo-raver', email: 'maria@rave.com', password: 'demo123', displayName: 'Maria Torres', role: 'user', createdAt: '2025-09-15T00:00:00.000Z' },
-    { id: 'r2', email: 'carlos@gmail.com', password: 'x', displayName: 'Carlos Mendez', role: 'user', createdAt: '2025-10-01T00:00:00.000Z' },
-    { id: 'r3', email: 'valentina@gmail.com', password: 'x', displayName: 'Valentina Rios', role: 'user', createdAt: '2025-10-05T00:00:00.000Z' },
-    { id: 'r4', email: 'santiago@gmail.com', password: 'x', displayName: 'Santiago Herrera', role: 'user', createdAt: '2025-11-01T00:00:00.000Z' },
-    { id: 'r5', email: 'camila@gmail.com', password: 'x', displayName: 'Camila Duarte', role: 'user', createdAt: '2025-11-15T00:00:00.000Z' },
+    { id: 'demo-raver', email: 'maria@rave.com', demo: true, displayName: 'Maria Torres', role: 'user', createdAt: '2025-09-15T00:00:00.000Z' },
+    { id: 'r2', email: 'carlos@gmail.com', demo: true, displayName: 'Carlos Mendez', role: 'user', createdAt: '2025-10-01T00:00:00.000Z' },
+    { id: 'r3', email: 'valentina@gmail.com', demo: true, displayName: 'Valentina Rios', role: 'user', createdAt: '2025-10-05T00:00:00.000Z' },
+    { id: 'r4', email: 'santiago@gmail.com', demo: true, displayName: 'Santiago Herrera', role: 'user', createdAt: '2025-11-01T00:00:00.000Z' },
+    { id: 'r5', email: 'camila@gmail.com', demo: true, displayName: 'Camila Duarte', role: 'user', createdAt: '2025-11-15T00:00:00.000Z' },
   ]
   ravers.forEach(r => batch.set(doc(db, 'users', r.id), r))
 

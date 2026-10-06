@@ -70,6 +70,13 @@ const CheckoutModal = ({ isOpen, onClose, event, tier = null, onPaid }) => {
     onClose()
   }
 
+  // Fills the form with a valid test card (4242… passes the Luhn check).
+  // Handy for demos: one click and the payment can go through.
+  const useTestCard = () => {
+    setErrors({})
+    setForm({ name: 'Tarjeta de Prueba', number: '4242 4242 4242 4242', expiry: '12/28', cvc: '123' })
+  }
+
   // When the organizer sells in phases, the amount comes from the phase on sale.
   const amount = tier ? tier.price : event?.price
   const price = amount === 0 ? 'Gratis' : `$${amount}`
@@ -129,6 +136,11 @@ const CheckoutModal = ({ isOpen, onClose, event, tier = null, onPaid }) => {
               {errors.cvc && <span className="co-err">{errors.cvc}</span>}
             </div>
           </div>
+
+          <button type="button" className="co-testcard" onClick={useTestCard}
+            disabled={status === 'processing'}>
+            Usar tarjeta de prueba
+          </button>
 
           <Button fullWidth size="lg" onClick={handlePay} disabled={status === 'processing'}>
             {status === 'processing' ? 'Procesando pago…' : `Pagar ${price}`}

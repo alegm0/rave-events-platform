@@ -6,10 +6,7 @@ import {
   signOut,
   onAuthStateChanged
 } from 'firebase/auth'
-import {
-  createUser, getUser, updateUser, seedData, backfillVenues, ensureFeaturedEvents,
-  processSubscriptionReminders, loginDemoUser, ensureDemoFlags, purgeStoredPasswords
-} from '../lib/db'
+import { createUser, getUser, updateUser, processSubscriptionReminders } from '../lib/db'
 
 const AuthContext = createContext()
 
@@ -26,6 +23,15 @@ const REGISTER_ERRORS = {
   'auth/operation-not-allowed': 'El registro con correo y contraseña está desactivado en Firebase.'
 }
 
+const LOGIN_ERRORS = {
+  'auth/invalid-credential': 'Correo o contraseña incorrectos.',
+  'auth/invalid-email': 'El correo no es válido.',
+  'auth/user-not-found': 'No existe una cuenta con ese correo.',
+  'auth/wrong-password': 'Correo o contraseña incorrectos.',
+  'auth/too-many-requests': 'Demasiados intentos. Espera un momento e inténtalo de nuevo.',
+  'auth/network-request-failed': 'Sin conexión. Revisa tu red e inténtalo de nuevo.'
+}
+
 export const useAuth = () => {
   const context = useContext(AuthContext)
   if (!context) throw new Error('useAuth must be used within AuthProvider')
@@ -38,29 +44,9 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Seed data on first load, backfill venues, then upsert the live + Ibiza events
-    seedData()
-      .then(() => backfillVenues())
-      .then(() => ensureFeaturedEvents())
-      // Strip any plaintext `password` field left behind by older versions. The
-      // users collection is world-readable (see firestore.rules), so this runs
-      // on every boot until no document carries the field.
-      // Flag the seeded fixtures first, then drop their stored passwords: the
-      // demo login checks the flag, never a password kept in the database.
-      .then(() => ensureDemoFlags())
-      .then(() => purgeStoredPasswords())
-      .catch((err) => {
-        // Seeding writes as an anonymous visitor, which the deployed Firestore
-        // rules reject on purpose. Say so instead of failing silently.
-        console.warn(
-          '[rave] No se pudo sembrar/actualizar los datos de demostración. ' +
-          'Con las reglas de Firestore desplegadas esto es lo esperado: ejecuta el seeding ' +
-          'con el emulador o con credenciales de administrador.',
-          err?.code || err?.message || err
-        )
-      })
-
-    // Listen to Firebase Auth state
+    // Listen to Firebase Auth state. Seeding the database is NOT done here: it
+    // is a one-off task run locally with the Admin SDK (see scripts/seed.mjs),
+    // never on every visitor's page load.
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         // User is signed in — fetch profile from Firestore
@@ -75,19 +61,8 @@ export const AuthProvider = ({ children }) => {
           setUserProfile({ id: firebaseUser.uid, email: firebaseUser.email })
         }
       } else {
-        // Check localStorage fallback for demo accounts
-        const savedUserId = localStorage.getItem('rave_currentUser')
-        if (savedUserId) {
-          const user = await getUser(savedUserId)
-          if (user) {
-            setCurrentUser(user)
-            setUserProfile(user)
-            processSubscriptionReminders(user.id).catch(() => {})
-          }
-        } else {
-          setCurrentUser(null)
-          setUserProfile(null)
-        }
+        setCurrentUser(null)
+        setUserProfile(null)
       }
       setLoading(false)
     })
@@ -97,7 +72,6 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (email, password, displayName, role = 'user') => {
     try {
-      // Try Firebase Auth first
       const { user: firebaseUser } = await createUserWithEmailAndPassword(auth, email, password)
       const userData = {
         id: firebaseUser.uid,
@@ -122,7 +96,6 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      // Try Firebase Auth first
       const { user: firebaseUser } = await signInWithEmailAndPassword(auth, email, password)
       const profile = await getUser(firebaseUser.uid)
       if (profile) {
@@ -130,16 +103,15 @@ export const AuthProvider = ({ children }) => {
         setUserProfile(profile)
         return profile
       }
+      // Authenticated but no Firestore profile yet — treat the Auth record as the
+      // minimal profile so the session is still valid.
+      const minimal = { id: firebaseUser.uid, email: firebaseUser.email }
+      setCurrentUser(minimal)
+      setUserProfile(minimal)
+      return minimal
     } catch (firebaseError) {
-      // Fallback: check Firestore directly (for demo accounts)
+      throw new Error(LOGIN_ERRORS[firebaseError.code] || 'No se pudo iniciar sesión. Inténtalo de nuevo.')
     }
-
-    // Fallback login for seeded demo accounts (flagged `demo: true` in Firestore)
-    const user = await loginDemoUser(email, password)
-    localStorage.setItem('rave_currentUser', user.id)
-    setCurrentUser(user)
-    setUserProfile(user)
-    return user
   }
 
   const logout = async () => {
@@ -148,16 +120,15 @@ export const AuthProvider = ({ children }) => {
     } catch (e) {
       // ignore
     }
-    localStorage.removeItem('rave_currentUser')
     setCurrentUser(null)
     setUserProfile(null)
   }
 
   const updateProfile = async (data) => {
     if (!currentUser) return
-    // `role` and `demo` are not editable from the profile: promoting yourself to
-    // organizer must not be a matter of sending a different field.
-    const { role, demo, password, ...safe } = data
+    // `role` is not editable from the profile: promoting yourself to organizer
+    // must not be a matter of sending a different field.
+    const { role, password, ...safe } = data
     const updated = await updateUser(currentUser.id, safe)
     setCurrentUser(updated)
     setUserProfile(updated)
@@ -168,7 +139,14 @@ export const AuthProvider = ({ children }) => {
       currentUser, userProfile, loading,
       register, login, logout, updateProfile
     }}>
-      {!loading && children}
+      {loading ? (
+        <div style={{
+          minHeight: '100vh', display: 'flex', alignItems: 'center',
+          justifyContent: 'center', background: '#0d0d0d'
+        }}>
+          <div className="loader" />
+        </div>
+      ) : children}
     </AuthContext.Provider>
   )
 }

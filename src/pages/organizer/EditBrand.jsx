@@ -9,7 +9,7 @@ import '../organizer/Dashboard.css'
 import './EditBrand.css'
 
 const COVER_OPTIONS = [
-  'https://images.unsplash.com/photo-1571266028243-3716f02d2d2e?w=1200&q=80',
+  'https://images.unsplash.com/photo-1549924231-f129b911e442?w=1200&q=80',
   'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=1200&q=80',
   'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=1200&q=80',
   'https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?w=1200&q=80',
@@ -20,7 +20,7 @@ const COVER_OPTIONS = [
 const LOGO_OPTIONS = [
   'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=200&q=80',
   'https://images.unsplash.com/photo-1504680177321-2e6a879aac86?w=200&q=80',
-  'https://images.unsplash.com/photo-1571266028243-3716f02d2d2e?w=200&q=80',
+  'https://images.unsplash.com/photo-1506157786151-b8491531f063?w=200&q=80',
   'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=200&q=80',
 ]
 

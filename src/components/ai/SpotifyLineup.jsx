@@ -1,16 +1,20 @@
 import { useState, useEffect } from 'react'
 import { searchArtist, analyzeLineupStyle } from '../../lib/ai/spotify'
-import { getTopTracks as getDeezerTracks, findArtist as findDeezerArtist } from '../../lib/ai/deezer'
-import { FiMusic, FiExternalLink, FiPlay, FiPause } from 'react-icons/fi'
+import { getTopTracks as getDeezerTracks, findArtist as findDeezerArtist, searchTracksByArtist } from '../../lib/ai/deezer'
+import { useAuth } from '../../context/AuthContext'
+import { getSavedArtists, toggleSavedArtist } from '../../lib/db'
+import { FiMusic, FiExternalLink, FiPlay, FiPause, FiStar } from 'react-icons/fi'
 import './AIComponents.css'
 
 const SpotifyLineup = ({ lineup }) => {
+  const { currentUser } = useAuth()
   const [artists, setArtists] = useState([])
   const [styleProfile, setStyleProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [playingTrack, setPlayingTrack] = useState(null)
   const [audio, setAudio] = useState(null)
   const [expanded, setExpanded] = useState(false)
+  const [saved, setSaved] = useState([])
 
   useEffect(() => {
     if (!lineup || lineup.length === 0) {
@@ -32,7 +36,12 @@ const SpotifyLineup = ({ lineup }) => {
           // Deezer = the audio engine (real playable 30s previews, no login)
           let tracks = []
           const deezer = await findDeezerArtist(name)
-          if (deezer) tracks = await getDeezerTracks(deezer.id, 5)
+          if (deezer) {
+            tracks = await getDeezerTracks(deezer.id, 5)
+            // Some underground artists have an empty /top endpoint — fall back
+            // to a name search so the player still has real previews to play.
+            if (tracks.length === 0) tracks = await searchTracksByArtist(deezer.name, 5)
+          }
 
           // Merge: prefer Spotify branding, fall back to Deezer picture
           if (spotify || deezer) {
@@ -62,6 +71,20 @@ const SpotifyLineup = ({ lineup }) => {
 
     return () => { if (audio) { audio.pause(); audio.src = '' } }
   }, [lineup])
+
+  // Load the user's saved artists so the ⭐ reflects their real state
+  useEffect(() => {
+    if (!currentUser) { setSaved([]); return }
+    getSavedArtists(currentUser.id).then(setSaved)
+  }, [currentUser])
+
+  const isSaved = (name) => saved.some((a) => a.toLowerCase() === name.toLowerCase())
+
+  const toggleSave = async (name) => {
+    if (!currentUser || !name) return
+    const next = await toggleSavedArtist(currentUser.id, name)
+    setSaved(next)
+  }
 
   const playPreview = (track) => {
     if (!track.previewUrl) return
@@ -124,6 +147,16 @@ const SpotifyLineup = ({ lineup }) => {
                 <h4>{artist.name}</h4>
                 <span className="ai-artist-genres">{artist.genres.slice(0, 2).join(', ')}</span>
               </div>
+              {currentUser && (
+                <button
+                  type="button"
+                  className={`ai-save-artist ${isSaved(artist.name) ? 'is-saved' : ''}`}
+                  onClick={() => toggleSave(artist.name)}
+                  aria-pressed={isSaved(artist.name)}
+                  title={isSaved(artist.name) ? 'Quitar de los que quieres ver' : 'Marca los que quieres ver'}>
+                  <FiStar />
+                </button>
+              )}
               {(artist.spotifyUrl || artist.deezerUrl) && (
                 <a href={artist.spotifyUrl || artist.deezerUrl} target="_blank" rel="noopener noreferrer"
                   className="ai-spotify-link" title={artist.spotifyUrl ? 'Abrir en Spotify' : 'Abrir en Deezer'}>

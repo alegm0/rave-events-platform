@@ -53,7 +53,8 @@ Built as a thesis project, it demonstrates modern web development practices incl
 | QR Codes | qrcode.react |
 | Icons | react-icons (Feather) |
 | Styling | CSS3 with custom properties |
-| Data | localStorage (zero-config, no backend needed) |
+| Auth | Firebase Authentication |
+| Data | Cloud Firestore (with Cloud Storage for uploads) |
 | Architecture | Component-based, Context API, custom data layer |
 
 ## Screenshots
@@ -82,7 +83,8 @@ src/
 │   ├── layout/         # Navbar (with notifications), Footer
 │   └── ui/             # Button, Card, Input, HeroScene (3D)
 ├── context/            # AuthContext (global auth state)
-├── lib/                # db.js (data abstraction layer over localStorage)
+├── firebase/           # config.js (Auth, Firestore and Storage clients)
+├── lib/                # db.js (data layer over Cloud Firestore), ai/, venue, timetable
 ├── pages/              # Page components
 │   ├── organizer/      # Dashboard, CreateEvent, MyEvents, Analytics, Scanner, EditBrand
 │   ├── Home.jsx        # Landing with 3D hero (redirects if logged in)
@@ -101,20 +103,22 @@ src/
 
 ### Data Model
 
-- **Users** — email, password, displayName, role (user/organizer), brand profile
-- **Events** — title, date, time, duration, location, price, capacity, genre, lineup, image
-- **Tickets** — eventId, userId, status (valid/used), unique QR code
-- **Notifications** — userId, type, title, message, read status
+- **Users** — email, displayName, role (user/organizer), brand profile, comfort profile. Passwords are never stored here: they are handled by Firebase Authentication.
+- **Events** — title, date, time, duration, location, capacity, genre, lineup, image, minimum age, single price or ordered pricing tiers, and a schematic venue (zones and services)
+- **Tickets** — eventId, userId, status (valid/used), unique QR code, tier and price actually paid
+- **Notifications** — userId, type (purchase/subscription/reminder), title, message, read status
 - **Subscriptions** — userId, eventId (for "notify me" on upcoming events)
+- **Reviews** — userId, eventId, rating and text, used for the sentiment report
+- **Going** — userId, eventId (attendance intent, drives the "who's going" list)
 
 ## Getting Started
 
 ```bash
 # Clone the repository
-git clone https://github.com/YOUR_USERNAME/rave-platform.git
+git clone https://github.com/alegm0/rave-events-platform.git
 
 # Navigate to project
-cd rave-platform
+cd rave-events-platform
 
 # Install dependencies
 npm install
@@ -125,7 +129,28 @@ npm run dev
 # Open http://localhost:3000
 ```
 
-No database setup needed. The app uses localStorage — just run and go.
+### Configuration
+
+The app needs a Firebase project (Authentication, Cloud Firestore and Cloud Storage).
+Create a `.env` file in the project root:
+
+```
+VITE_FIREBASE_API_KEY=...
+VITE_FIREBASE_AUTH_DOMAIN=...
+VITE_FIREBASE_PROJECT_ID=...
+VITE_FIREBASE_STORAGE_BUCKET=...
+VITE_FIREBASE_MESSAGING_SENDER_ID=...
+VITE_FIREBASE_APP_ID=...
+```
+
+Enable the Email/Password sign-in provider in Firebase Authentication, then deploy the
+access rules:
+
+```bash
+firebase deploy --only firestore:rules,storage
+```
+
+Nothing is kept in browser storage: every read and write goes to Cloud Firestore.
 
 ### Quick Test
 
@@ -143,7 +168,10 @@ No database setup needed. The app uses localStorage — just run and go.
 npm run build
 ```
 
-Output goes to `dist/`. Deploy to Vercel, Netlify, or any static hosting.
+Output goes to `dist/`. The project is deployed to Vercel: `vercel.json` rewrites every
+route to `index.html` so client-side routes survive a refresh. Remember to set the
+`VITE_FIREBASE_*` environment variables in the Vercel project settings, and to add the
+deployment domain to the authorised domains list in Firebase Authentication.
 
 ## License
 

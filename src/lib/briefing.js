@@ -86,7 +86,15 @@ export const buildDiscovery = (event, knownArtists = []) => {
  */
 export const buildPreRaveBrief = (event, { comfortProfile = {}, knownArtists = [], savedArtists = [] } = {}) => {
   if (!event) return null
+
+  // `minimalText` (a comfort preference the user opts into) makes the brief show
+  // only the essentials: how the night unfolds and what to know before going.
+  // The venue plan, accessibility notes and discovery block are hidden to reduce
+  // cognitive load — the same verified data, presented with less on screen.
+  const minimal = !!comfortProfile.minimalText
+
   return {
+    minimal,
     days: daysUntilEvent(event),
     timetable: buildBriefTimetable(event, savedArtists),
     venuePlan: buildVenuePlan(event.venue, comfortProfile),

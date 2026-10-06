@@ -41,7 +41,7 @@ const OrganizerProfile = () => {
     <div className="op-page">
       {/* Cover */}
       <div className="op-cover">
-        <img src={brand.cover || 'https://images.unsplash.com/photo-1571266028243-3716f02d2d2e?w=1200&q=80'} alt="" className="op-cover-img" />
+        <img src={brand.cover || 'https://images.unsplash.com/photo-1549924231-f129b911e442?w=1200&q=80'} alt="" className="op-cover-img" />
         <div className="op-cover-fade"></div>
       </div>
 

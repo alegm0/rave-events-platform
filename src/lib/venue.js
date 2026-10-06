@@ -65,6 +65,11 @@ export const buildVenuePlan = (venue, comfortProfile = {}) => {
   const services = venue.services || []
   const plan = []
 
+  // `simpleNavigation` (opt-in comfort preference) reduces the plan to the four
+  // points a person needs to orient themselves: entrance, main stage, nearest
+  // toilet and exit. Fewer stops = a plan that's easier to follow.
+  const simple = !!comfortProfile.simpleNavigation
+
   const find = (type, opts = {}) =>
     services.find((s) => s.type === type && (!opts.accessible || s.accessible))
 
@@ -82,21 +87,25 @@ export const buildVenuePlan = (venue, comfortProfile = {}) => {
     : find('toilet')
   if (toilet) plan.push({ ...toilet, note: toilet.accessible ? 'Accesible' : null })
 
-  const water = find('water')
-  if (water) plan.push(water)
+  // In simple-navigation mode we stop here plus the exit: only the four
+  // essentials. Otherwise we add water, rest, quiet and first-aid points.
+  if (!simple) {
+    const water = find('water')
+    if (water) plan.push(water)
 
-  if (comfortProfile.restAreas) {
-    const rest = find('rest')
-    if (rest) plan.push({ ...rest, note: 'Priorizado por tus preferencias' })
+    if (comfortProfile.restAreas) {
+      const rest = find('rest')
+      if (rest) plan.push({ ...rest, note: 'Priorizado por tus preferencias' })
+    }
+
+    if (comfortProfile.quieterAreas) {
+      const quiet = (venue.zones || []).find((z) => z.type === 'quiet')
+      if (quiet) plan.push({ id: quiet.id, type: 'quiet', label: quiet.label, walkMin: 3, isZone: true, note: 'Zona tranquila' })
+    }
+
+    const firstaid = find('firstaid')
+    if (firstaid) plan.push(firstaid)
   }
-
-  if (comfortProfile.quieterAreas) {
-    const quiet = (venue.zones || []).find((z) => z.type === 'quiet')
-    if (quiet) plan.push({ id: quiet.id, type: 'quiet', label: quiet.label, walkMin: 3, isZone: true, note: 'Zona tranquila' })
-  }
-
-  const firstaid = find('firstaid')
-  if (firstaid) plan.push(firstaid)
 
   const exit = find('exit')
   if (exit) plan.push(exit)

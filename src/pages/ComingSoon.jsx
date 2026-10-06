@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { subscribe, isSubscribed, addNotification } from '../lib/db'
+import { subscribe, isSubscribed, addNotification, getEvents } from '../lib/db'
 import { FiBell, FiBellOff, FiCheck } from 'react-icons/fi'
 import Button from '../components/ui/Button'
 import './ComingSoon.css'
@@ -39,21 +39,39 @@ const Countdown = ({ target }) => {
   )
 }
 
-const SAMPLE_UPCOMING = [
-  { id: 'cs1', title: 'ECLIPSE', teaser: 'Una experiencia audiovisual inmersiva que fusiona techno industrial con arte generativo en tiempo real.', launchDate: '2026-06-15', imageUrl: 'https://images.unsplash.com/photo-1504680177321-2e6a879aac86?w=800&q=80' },
-  { id: 'cs2', title: 'RESONANCE', teaser: 'Festival de 48 horas en una locación secreta. Tres escenarios. Sin teléfonos. Solo música.', launchDate: '2026-07-20', imageUrl: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800&q=80' },
-  { id: 'cs3', title: 'VOID', teaser: 'Sesión de deep techno en completa oscuridad. Experimenta el sonido sin distracciones visuales.', launchDate: '2026-08-10', imageUrl: 'https://images.unsplash.com/photo-1571266028243-3716f02d2d2e?w=800&q=80' },
-]
-
 const ComingSoon = () => {
   const { currentUser } = useAuth()
   const navigate = useNavigate()
-  const [events] = useState(SAMPLE_UPCOMING)
+  const [events, setEvents] = useState([])
+  const [loading, setLoading] = useState(true)
   const [subscribed, setSubscribed] = useState({})
   const [justSubscribed, setJustSubscribed] = useState(null)
 
+  // "Próximamente" = the real events furthest out in the future. Their countdowns
+  // run against real dates, so they actually tick down instead of sitting at 00.
   useEffect(() => {
-    if (!currentUser) return
+    const load = async () => {
+      const all = await getEvents()
+      const now = new Date()
+      const future = all
+        .filter((e) => e.status === 'active' && new Date(`${e.date}T00:00:00`) > now)
+        .sort((a, b) => new Date(b.date) - new Date(a.date)) // furthest first
+        .slice(0, 4)
+        .map((e) => ({
+          id: e.id,
+          title: e.title,
+          teaser: e.description,
+          launchDate: `${e.date}T${e.time || '22:00'}`,
+          imageUrl: e.imageUrl,
+        }))
+      setEvents(future)
+      setLoading(false)
+    }
+    load()
+  }, [])
+
+  useEffect(() => {
+    if (!currentUser || events.length === 0) return
     const load = async () => {
       const subs = {}
       for (const e of events) {
@@ -72,7 +90,7 @@ const ComingSoon = () => {
     await addNotification(currentUser.id, {
       type: 'subscription',
       title: `Te suscribiste a ${event.title}`,
-      message: `Te notificaremos cuando ${event.title} esté disponible para compra.`,
+      message: `Te avisaremos con novedades y recordatorios de ${event.title}.`,
       eventId: event.id,
       image: event.imageUrl,
     })
@@ -93,6 +111,11 @@ const ComingSoon = () => {
       </div>
 
       <div className="container">
+        {loading ? (
+          <div className="cs-list"><p style={{ color: 'rgba(255,255,255,0.4)', padding: '2rem 0' }}>Cargando próximos eventos...</p></div>
+        ) : events.length === 0 ? (
+          <div className="cs-list"><p style={{ color: 'rgba(255,255,255,0.4)', padding: '2rem 0' }}>No hay eventos próximos por ahora. Vuelve pronto.</p></div>
+        ) : (
         <div className="cs-list">
           {events.map((event, i) => (
             <div key={event.id} className="cs-card" style={{ animationDelay: `${i * 0.15}s` }}>
@@ -125,6 +148,7 @@ const ComingSoon = () => {
             </div>
           ))}
         </div>
+        )}
       </div>
     </div>
   )

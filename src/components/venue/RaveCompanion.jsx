@@ -12,7 +12,7 @@ const RaveCompanion = ({ event }) => {
   const [messages, setMessages] = useState([
     {
       from: 'bot',
-      text: 'Hola. Puedo ayudarte con lo de este evento: horarios, escenarios, agua, baños, accesibilidad, descanso y salidas. Solo respondo con información verificada.',
+      text: 'Hola. Puedo ayudarte con lo de este evento: line-up y horarios, precio, ubicación, agua, baños, accesibilidad, descanso, zona de fumadores y salidas. Solo respondo con información verificada.',
     },
   ])
   const listRef = useRef(null)

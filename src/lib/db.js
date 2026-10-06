@@ -1,10 +1,11 @@
 // Firestore database layer
-// Replaces localStorage with Firebase Firestore
+// Every domain read and write goes through Cloud Firestore. The app keeps no
+// data in browser storage.
 
 import { db } from '../firebase/config'
 import {
-  collection, doc, getDoc, getDocs, addDoc, updateDoc, deleteDoc,
-  query, where, orderBy, setDoc, serverTimestamp, writeBatch, deleteField, increment
+  collection, doc, getDoc, getDocs, updateDoc, deleteDoc,
+  query, where, setDoc, writeBatch, increment
 } from 'firebase/firestore'
 
 // ── Helper ──
@@ -61,52 +62,6 @@ export const createUser = async (userData) => {
   return user
 }
 
-// ── Demo accounts ──
-// The seeded accounts are public fixtures for the demo, not real users: they are
-// flagged `demo: true` and share this well-known password, which lives in code
-// and is never stored in Firestore. Real accounts always go through Firebase Auth.
-export const DEMO_PASSWORD = 'demo123'
-
-export const loginDemoUser = async (email, password) => {
-  const users = await getCollection('users')
-  const user = users.find(u => u.email === email && u.demo === true)
-  if (!user || password !== DEMO_PASSWORD) throw new Error('Credenciales incorrectas')
-  return user
-}
-
-// Emails of the seeded fixtures. Databases seeded by an older version have no
-// `demo` flag, so we set it on the accounts we know before dropping their
-// stored password — otherwise the demo logins would stop working.
-const DEMO_EMAILS = [
-  'demo@rave.com', 'maria@rave.com', 'carlos@gmail.com', 'valentina@gmail.com',
-  'santiago@gmail.com', 'camila@gmail.com',
-  'amnesia@rave.com', 'hi@rave.com', 'ushuaia@rave.com',
-]
-
-export const ensureDemoFlags = async () => {
-  const users = await getCollection('users')
-  const pending = users.filter(u => u.demo !== true && DEMO_EMAILS.includes(u.email))
-  if (pending.length === 0) return 0
-  const batch = writeBatch(db)
-  pending.forEach(u => batch.update(doc(db, 'users', u.id), { demo: true }))
-  await batch.commit()
-  invalidateCache('users')
-  return pending.length
-}
-
-// One-off cleanup: earlier versions stored plaintext passwords on the user
-// document, which is readable by anyone. Remove the field wherever it survives.
-export const purgeStoredPasswords = async () => {
-  const users = await getCollection('users')
-  const withPassword = users.filter(u => u.password !== undefined)
-  if (withPassword.length === 0) return 0
-  const batch = writeBatch(db)
-  withPassword.forEach(u => batch.update(doc(db, 'users', u.id), { password: deleteField() }))
-  await batch.commit()
-  invalidateCache('users')
-  return withPassword.length
-}
-
 export const getUser = async (id) => {
   if (!id) return null
   return await getDocument('users', id)
@@ -142,6 +97,29 @@ export const updateComfortProfile = async (userId, comfortProfile) => {
   await updateDoc(doc(db, 'users', userId), { comfortProfile })
   invalidateCache('users')
   return comfortProfile
+}
+
+// ── Saved artists ──
+// The user marks acts they want to see. These names drive the ⭐ in the
+// Pre-Rave Brief timetable and count as "known artists" for music discovery.
+// Stored as an array of names on the user document under `savedArtists`.
+export const getSavedArtists = async (userId) => {
+  if (!userId) return []
+  const user = await getDocument('users', userId)
+  return user?.savedArtists || []
+}
+
+export const toggleSavedArtist = async (userId, artistName) => {
+  if (!userId || !artistName) return []
+  const user = await getDocument('users', userId)
+  const current = user?.savedArtists || []
+  const exists = current.some((a) => a.toLowerCase() === artistName.toLowerCase())
+  const next = exists
+    ? current.filter((a) => a.toLowerCase() !== artistName.toLowerCase())
+    : [...current, artistName]
+  await updateDoc(doc(db, 'users', userId), { savedArtists: next })
+  invalidateCache('users')
+  return next
 }
 
 // ── Events ──
@@ -704,45 +682,47 @@ const matchTemplateToVenue = (venue) => {
   return VENUE_TEMPLATES.warehouse
 }
 
-// ── Featured events: live-now demo + real Ibiza events ──
+// ── Featured events: live-now demo + Brisbane venue events ──
 // Idempotent upsert (runs on load). The live event's date/times are computed
 // dynamically so a set is always "playing now" whenever the app is opened.
+// All data is set in Brisbane, Australia (Fortitude Valley is the city's
+// nightlife district) with prices in AUD — matching the project's scope.
 
-const IBIZA_ORGANIZERS = [
+const BRISBANE_ORGANIZERS = [
   {
-    id: 'org-ibiza-amnesia',
-    email: 'amnesia@rave.com', demo: true, displayName: 'Amnesia Ibiza', role: 'organizer',
+    id: 'org-tbc',
+    email: 'tbc@rave.com', demo: true, displayName: 'The TBC Club', role: 'organizer',
     createdAt: '2024-01-01T00:00:00.000Z',
     brand: {
-      name: 'Amnesia Ibiza',
-      bio: 'Club legendario de Ibiza desde 1976. Cuna del terraza sound y hogar de Cocoon, Pyramid y Elrow.',
-      logo: 'https://images.unsplash.com/photo-1571266028243-3716f02d2d2e?w=200&q=80',
+      name: 'The TBC Club',
+      bio: 'Club underground en Fortitude Valley donde terminan los que viven la música de verdad. Techno y house para quienes vienen por el line-up.',
+      logo: 'https://images.unsplash.com/photo-1506157786151-b8491531f063?w=200&q=80',
       cover: 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=1200&q=80',
-      city: 'Ibiza', instagram: '@amnesiaibiza', website: 'amnesia.es', founded: '1976',
+      city: 'Brisbane', instagram: '@thetbcclub', website: 'tbcclub.com.au', founded: '2015',
     },
   },
   {
-    id: 'org-hi-ibiza',
-    email: 'hi@rave.com', demo: true, displayName: 'Hï Ibiza', role: 'organizer',
+    id: 'org-met',
+    email: 'themet@rave.com', demo: true, displayName: 'The MET Brisbane', role: 'organizer',
     createdAt: '2024-01-01T00:00:00.000Z',
     brand: {
-      name: 'Hï Ibiza',
-      bio: 'El club número uno del mundo según DJ Mag. Sede de Black Coffee, Tale Of Us y Glitterbox en Playa d\'en Bossa.',
+      name: 'The MET Brisbane',
+      bio: 'Club icónico en el corazón de Fortitude Valley. Cinco barras en tres niveles y los DJs más grandes del dance.',
       logo: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=200&q=80',
       cover: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=1200&q=80',
-      city: 'Ibiza', instagram: '@hiibizaofficial', website: 'hiibiza.com', founded: '2017',
+      city: 'Brisbane', instagram: '@themetbrisbane', website: 'themet.com.au', founded: '1992',
     },
   },
   {
-    id: 'org-ushuaia',
-    email: 'ushuaia@rave.com', demo: true, displayName: 'Ushuaïa Ibiza', role: 'organizer',
+    id: 'org-riverstage',
+    email: 'riverstage@rave.com', demo: true, displayName: 'Riverstage Open Air', role: 'organizer',
     createdAt: '2024-01-01T00:00:00.000Z',
     brand: {
-      name: 'Ushuaïa Ibiza',
-      bio: 'El open-air más icónico de Ibiza. Fiestas de día bajo el sol con los headliners más grandes del mundo.',
+      name: 'Riverstage Open Air',
+      bio: 'El anfiteatro al aire libre más icónico de Brisbane, en los Jardines Botánicos. Festivales bajo las estrellas junto al río.',
       logo: 'https://images.unsplash.com/photo-1506157786151-b8491531f063?w=200&q=80',
       cover: 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=1200&q=80',
-      city: 'Ibiza', instagram: '@ushuaiaibiza', website: 'ushuaiaibiza.com', founded: '2011',
+      city: 'Brisbane', instagram: '@brisbaneriverstage', website: 'riverstage.com.au', founded: '1988',
     },
   },
 ]
@@ -761,12 +741,12 @@ const buildLiveEvent = () => {
   const t = (h) => `${pad(h)}:00`
   return {
     id: 'ev-live',
-    title: 'Cocoon — Live Tonight',
-    description: 'Techno hipnótico en la terraza. El evento está sucediendo AHORA: entra a Rave Mode para ver quién toca en este momento.',
+    title: 'Warehouse Sessions — Live Tonight',
+    description: 'Techno hipnótico en Fortitude Valley. El evento está sucediendo AHORA: entra a Rave Mode para ver quién toca en este momento.',
     date, time: t(doorHour), duration: 8,
-    location: 'Amnesia Terrace', city: 'Ibiza', genre: 'Techno', price: 60, capacity: 3000,
+    location: 'The TBC Club', address: '365 Brunswick St', city: 'Brisbane', genre: 'Techno', price: 45, capacity: 800,
     imageUrl: 'https://images.unsplash.com/photo-1493676304819-0d7a8d026dcf?w=800&q=80',
-    organizerId: 'org-ibiza-amnesia', ticketsSold: 1840, status: 'active', minAge: 18,
+    organizerId: 'org-tbc', ticketsSold: 540, status: 'active', minAge: 18,
     lineup: [
       { name: 'Ricardo Villalobos', time: t(set1) },
       { name: 'Sven Väth', time: t(set2) },
@@ -777,82 +757,83 @@ const buildLiveEvent = () => {
   }
 }
 
-// Real Ibiza clubs + real top-DJ residencies/lineups (2026 season dates).
-const IBIZA_EVENTS = [
+// Brisbane venues (Fortitude Valley + Riverstage) with international DJ
+// lineups touring Australia. Dates in the 2026 season, prices in AUD.
+const BRISBANE_EVENTS = [
   {
-    id: 'ev-hi-afterlife',
-    title: 'Afterlife',
-    description: 'Tale Of Us presentan Afterlife en Hï Ibiza: melodic techno cinematográfico con producción audiovisual de otro nivel.',
-    date: '2026-07-03', time: '23:00', duration: 7,
-    location: 'Hï Ibiza', city: 'Ibiza', genre: 'Melodic Techno', price: 80, capacity: 3000,
-    imageUrl: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800&q=80',
-    organizerId: 'org-hi-ibiza', ticketsSold: 2100, status: 'active', minAge: 18,
+    id: 'ev-tbc-afterlife',
+    title: 'Afterlife Brisbane',
+    description: 'Tale Of Us presentan Afterlife en The TBC Club: melodic techno cinematográfico con producción audiovisual de otro nivel.',
+    date: '2026-07-03', time: '22:00', duration: 7,
+    location: 'The TBC Club', address: '365 Brunswick St, Fortitude Valley', city: 'Brisbane', genre: 'Melodic Techno', price: 75, capacity: 800,
+    imageUrl: 'https://images.unsplash.com/photo-1545128485-c400e7702796?w=800&q=80',
+    organizerId: 'org-tbc', ticketsSold: 610, status: 'active', minAge: 18,
     lineup: [
-      { name: 'Anyma', time: '23:00' },
-      { name: 'Mathame', time: '01:00' },
-      { name: 'Kevin de Vries', time: '03:00' },
-      { name: 'MRAK', time: '05:00' },
+      { name: 'Anyma', time: '22:00' },
+      { name: 'Mathame', time: '00:00' },
+      { name: 'Kevin de Vries', time: '02:00' },
+      { name: 'MRAK', time: '04:00' },
     ],
     venue: VENUE_TEMPLATES.warehouse,
   },
   {
-    id: 'ev-hi-blackcoffee',
+    id: 'ev-met-blackcoffee',
     title: 'Black Coffee',
-    description: 'La residencia de los domingos de Black Coffee en Hï Ibiza. Afro house y deep house hasta el amanecer.',
-    date: '2026-07-12', time: '23:30', duration: 7,
-    location: 'Hï Ibiza', city: 'Ibiza', genre: 'Afro House', price: 75, capacity: 3000,
-    imageUrl: 'https://images.unsplash.com/photo-1598387993441-a364f854c3e1?w=800&q=80',
-    organizerId: 'org-hi-ibiza', ticketsSold: 1750, status: 'active', minAge: 18,
+    description: 'Black Coffee aterriza en The MET Brisbane. Afro house y deep house hasta el amanecer en Fortitude Valley.',
+    date: '2026-07-12', time: '21:30', duration: 7,
+    location: 'The MET Brisbane', address: '620 Ann St, Fortitude Valley', city: 'Brisbane', genre: 'Afro House', price: 70, capacity: 1000,
+    imageUrl: 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=800&q=80',
+    organizerId: 'org-met', ticketsSold: 720, status: 'active', minAge: 18,
     lineup: [
-      { name: 'Black Coffee', time: '23:30' },
-      { name: 'Keinemusik', time: '02:00' },
-      { name: 'Themba', time: '04:30' },
+      { name: 'Black Coffee', time: '21:30' },
+      { name: 'Keinemusik', time: '00:00' },
+      { name: 'Themba', time: '02:30' },
     ],
-    venue: VENUE_TEMPLATES.warehouse,
+    venue: VENUE_TEMPLATES.club,
   },
   {
-    id: 'ev-amnesia-pyramid',
-    title: 'Pyramid',
-    description: 'Pyramid en Amnesia: techno y house crudo en las dos salas más icónicas de la isla.',
-    date: '2026-06-20', time: '23:59', duration: 8,
-    location: 'Amnesia Ibiza', city: 'Ibiza', genre: 'Techno', price: 55, capacity: 5000,
+    id: 'ev-tbc-drumcode',
+    title: 'Drumcode Brisbane',
+    description: 'Techno crudo de la mano de Drumcode en The TBC Club. Las dos salas más intensas de la Valley.',
+    date: '2026-06-20', time: '22:00', duration: 8,
+    location: 'The TBC Club', address: '365 Brunswick St, Fortitude Valley', city: 'Brisbane', genre: 'Techno', price: 65, capacity: 800,
     imageUrl: 'https://images.unsplash.com/photo-1574391884720-bbc3740c59d1?w=800&q=80',
-    organizerId: 'org-ibiza-amnesia', ticketsSold: 3200, status: 'active', minAge: 18,
+    organizerId: 'org-tbc', ticketsSold: 680, status: 'active', minAge: 18,
     lineup: [
-      { name: 'Charlotte de Witte', time: '00:00' },
-      { name: 'Adam Beyer', time: '02:00' },
-      { name: 'Enrico Sangiuliano', time: '04:00' },
-      { name: 'Amelie Lens', time: '06:00' },
+      { name: 'Charlotte de Witte', time: '22:00' },
+      { name: 'Adam Beyer', time: '00:00' },
+      { name: 'Enrico Sangiuliano', time: '02:00' },
+      { name: 'Amelie Lens', time: '04:00' },
     ],
-    venue: VENUE_TEMPLATES.warehouse,
+    venue: VENUE_TEMPLATES.club,
   },
   {
-    id: 'ev-ushuaia-armin',
+    id: 'ev-riverstage-asot',
     title: 'Armin van Buuren — A State Of Trance',
-    description: 'Armin van Buuren toma Ushuaïa al aire libre para una sesión épica de trance bajo las estrellas de Ibiza.',
-    date: '2026-08-01', time: '17:00', duration: 8,
-    location: 'Ushuaïa Ibiza', city: 'Ibiza', genre: 'Trance', price: 90, capacity: 8000,
+    description: 'Armin van Buuren toma el Riverstage al aire libre para una sesión épica de trance bajo las estrellas de Brisbane.',
+    date: '2026-08-01', time: '17:00', duration: 7,
+    location: 'Riverstage', address: '59 Gardens Point Rd, City Botanic Gardens', city: 'Brisbane', genre: 'Trance', price: 95, capacity: 9500,
     imageUrl: 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=800&q=80',
-    organizerId: 'org-ushuaia', ticketsSold: 5600, status: 'active', minAge: 18,
+    organizerId: 'org-riverstage', ticketsSold: 7200, status: 'active', minAge: 18,
     lineup: [
       { name: 'Armin van Buuren', time: '17:00' },
-      { name: 'Above & Beyond', time: '20:00' },
-      { name: 'Ferry Corsten', time: '22:30' },
+      { name: 'Above & Beyond', time: '19:30' },
+      { name: 'Ferry Corsten', time: '22:00' },
     ],
     venue: VENUE_TEMPLATES.festival,
   },
   {
-    id: 'ev-ushuaia-david',
-    title: 'David Guetta — F*** Me I\'m Famous',
-    description: 'La fiesta open-air más grande de Ushuaïa. David Guetta y sus invitados para un día inolvidable.',
-    date: '2026-08-15', time: '17:00', duration: 8,
-    location: 'Ushuaïa Ibiza', city: 'Ibiza', genre: 'House', price: 95, capacity: 8000,
-    imageUrl: 'https://images.unsplash.com/photo-1642178225043-f299dbea9f8d?w=800&q=80',
-    organizerId: 'org-ushuaia', ticketsSold: 6100, status: 'active', minAge: 18,
+    id: 'ev-riverstage-guetta',
+    title: 'David Guetta — Open Air',
+    description: 'La fiesta open-air más grande del año en el Riverstage. David Guetta y sus invitados para un día inolvidable junto al río.',
+    date: '2026-08-15', time: '16:00', duration: 8,
+    location: 'Riverstage', address: '59 Gardens Point Rd, City Botanic Gardens', city: 'Brisbane', genre: 'House', price: 110, capacity: 9500,
+    imageUrl: 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=800&q=80',
+    organizerId: 'org-riverstage', ticketsSold: 8100, status: 'active', minAge: 18,
     lineup: [
-      { name: 'David Guetta', time: '17:00' },
-      { name: 'Martin Garrix', time: '20:00' },
-      { name: 'Nicky Romero', time: '22:30' },
+      { name: 'David Guetta', time: '16:00' },
+      { name: 'Martin Garrix', time: '19:00' },
+      { name: 'Nicky Romero', time: '21:30' },
     ],
     venue: VENUE_TEMPLATES.festival,
   },
@@ -862,12 +843,12 @@ export const ensureFeaturedEvents = async () => {
   const batch = writeBatch(db)
 
   // Organizers (upsert with merge so we don't clobber anything else)
-  IBIZA_ORGANIZERS.forEach((o) => batch.set(doc(db, 'users', o.id), o, { merge: true }))
+  BRISBANE_ORGANIZERS.forEach((o) => batch.set(doc(db, 'users', o.id), o, { merge: true }))
 
-  // Live event (dynamic) + Ibiza events
+  // Live event (dynamic) + Brisbane events
   const liveEvent = buildLiveEvent()
   batch.set(doc(db, 'events', liveEvent.id), liveEvent, { merge: true })
-  IBIZA_EVENTS.forEach((e) => batch.set(doc(db, 'events', e.id), e, { merge: true }))
+  BRISBANE_EVENTS.forEach((e) => batch.set(doc(db, 'events', e.id), e, { merge: true }))
 
   // Give the demo raver a ticket to the live event so Rave Mode is reachable
   batch.set(doc(db, 'tickets', 'tk-live'), {
@@ -898,12 +879,12 @@ export const seedData = async () => {
     createdAt: '2025-06-01T00:00:00.000Z',
     brand: {
       name: 'NOCTURN Collective',
-      bio: 'Colectivo de música electrónica underground. Desde 2019 creando experiencias sonoras inmersivas en espacios no convencionales.',
+      bio: 'Colectivo de música electrónica underground de Brisbane. Desde 2019 creando experiencias sonoras inmersivas en espacios no convencionales de Fortitude Valley.',
       logo: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=200&q=80',
-      cover: 'https://images.unsplash.com/photo-1571266028243-3716f02d2d2e?w=1200&q=80',
-      city: 'Bogotá',
-      instagram: '@nocturn.co',
-      website: 'nocturn.co',
+      cover: 'https://images.unsplash.com/photo-1549924231-f129b911e442?w=1200&q=80',
+      city: 'Brisbane',
+      instagram: '@nocturn.bne',
+      website: 'nocturn.com.au',
       founded: '2019',
     }
   }
@@ -911,11 +892,11 @@ export const seedData = async () => {
 
   // Create demo ravers
   const ravers = [
-    { id: 'demo-raver', email: 'maria@rave.com', demo: true, displayName: 'Maria Torres', role: 'user', createdAt: '2025-09-15T00:00:00.000Z' },
-    { id: 'r2', email: 'carlos@gmail.com', demo: true, displayName: 'Carlos Mendez', role: 'user', createdAt: '2025-10-01T00:00:00.000Z' },
-    { id: 'r3', email: 'valentina@gmail.com', demo: true, displayName: 'Valentina Rios', role: 'user', createdAt: '2025-10-05T00:00:00.000Z' },
-    { id: 'r4', email: 'santiago@gmail.com', demo: true, displayName: 'Santiago Herrera', role: 'user', createdAt: '2025-11-01T00:00:00.000Z' },
-    { id: 'r5', email: 'camila@gmail.com', demo: true, displayName: 'Camila Duarte', role: 'user', createdAt: '2025-11-15T00:00:00.000Z' },
+    { id: 'demo-raver', email: 'maria@rave.com', demo: true, displayName: 'Mia Thompson', role: 'user', createdAt: '2025-09-15T00:00:00.000Z' },
+    { id: 'r2', email: 'carlos@gmail.com', demo: true, displayName: 'Liam Walker', role: 'user', createdAt: '2025-10-01T00:00:00.000Z' },
+    { id: 'r3', email: 'valentina@gmail.com', demo: true, displayName: 'Chloe Nguyen', role: 'user', createdAt: '2025-10-05T00:00:00.000Z' },
+    { id: 'r4', email: 'santiago@gmail.com', demo: true, displayName: 'Jack Robinson', role: 'user', createdAt: '2025-11-01T00:00:00.000Z' },
+    { id: 'r5', email: 'camila@gmail.com', demo: true, displayName: 'Olivia Harris', role: 'user', createdAt: '2025-11-15T00:00:00.000Z' },
   ]
   ravers.forEach(r => batch.set(doc(db, 'users', r.id), r))
 
@@ -925,13 +906,13 @@ export const seedData = async () => {
   const venueFestival = VENUE_TEMPLATES.festival
   const venueGallery = VENUE_TEMPLATES.gallery
 
-  // Sample events
+  // Sample events — all in Brisbane, Australia (prices in AUD)
   const sampleEvents = [
-    { id: 'ev1', title: 'Berghain Nights', description: 'Una noche de techno industrial en el warehouse mas iconico.', date: '2026-09-12', time: '23:00', duration: 10, location: 'Warehouse District', city: 'Bogota', genre: 'Techno', price: 45, capacity: 500, imageUrl: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800&q=80', organizerId: 'demo-org', ticketsSold: 7, status: 'active', minAge: 18, lineup: [{name: 'Amelie Lens', time: '23:00'}, {name: 'FJAAK', time: '01:30'}, {name: 'Kobosil', time: '04:00'}], venue: venueWarehouse },
-    { id: 'ev2', title: 'Deep Connection', description: 'Sesion de deep house en un club subterraneo.', date: '2026-09-18', time: '22:00', duration: 8, location: 'Club Subterraneo', city: 'Medellin', genre: 'Deep House', price: 35, capacity: 300, imageUrl: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800&q=80', organizerId: 'demo-org', ticketsSold: 5, status: 'active', minAge: 18, lineup: [{name: 'Solomun', time: '22:00'}, {name: 'Dixon', time: '01:00'}, {name: 'Ame', time: '03:30'}], venue: venueClub },
-    { id: 'ev3', title: 'Acid Rain', description: 'Acid techno en una bodega industrial abandonada.', date: '2026-09-25', time: '00:00', duration: 12, location: 'Bodega Industrial', city: 'Bogota', genre: 'Acid', price: 30, capacity: 400, imageUrl: 'https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?w=800&q=80', organizerId: 'demo-org', ticketsSold: 4, status: 'active', minAge: 21, lineup: [{name: '999999999', time: '00:00'}, {name: 'Dax J', time: '02:30'}, {name: 'SPFDJ', time: '05:00'}], venue: venueWarehouse },
-    { id: 'ev4', title: 'Euphoria Festival', description: 'Festival al aire libre de 24 horas. Tres escenarios.', date: '2026-10-02', time: '14:00', duration: 24, location: 'Parque Metropolitano', city: 'Cali', genre: 'Trance', price: 85, capacity: 2000, imageUrl: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=800&q=80', organizerId: 'demo-org', ticketsSold: 12, status: 'active', minAge: 16, lineup: [{name: 'Armin van Buuren', time: '14:00'}, {name: 'Above & Beyond', time: '17:00'}, {name: 'Paul van Dyk', time: '20:00'}], venue: venueFestival },
-    { id: 'ev5', title: 'Minimal Affairs', description: 'Minimal techno en galeria de arte.', date: '2026-10-10', time: '21:00', duration: 6, location: 'Galeria Central', city: 'Bogota', genre: 'Minimal', price: 25, capacity: 200, imageUrl: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&q=80', organizerId: 'demo-org', ticketsSold: 3, status: 'active', minAge: 18, lineup: [{name: 'Ricardo Villalobos', time: '21:00'}, {name: 'Zip', time: '00:00'}], venue: venueGallery },
+    { id: 'ev1', title: 'Warehouse District', description: 'Una noche de techno industrial en el warehouse más icónico de Fortitude Valley.', date: '2026-09-12', time: '22:00', duration: 8, location: 'The Warehouse', address: '27 Warner St, Fortitude Valley', city: 'Brisbane', genre: 'Techno', price: 45, capacity: 500, imageUrl: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800&q=80', organizerId: 'demo-org', ticketsSold: 7, status: 'active', minAge: 18, lineup: [{name: 'Amelie Lens', time: '22:00'}, {name: 'FJAAK', time: '00:30'}, {name: 'Kobosil', time: '03:00'}], venue: venueWarehouse },
+    { id: 'ev2', title: 'Deep Connection', description: 'Sesión de deep house en un club subterráneo de la Valley.', date: '2026-09-18', time: '21:00', duration: 7, location: 'Sub Club', address: '12 Constance St, Fortitude Valley', city: 'Brisbane', genre: 'Deep House', price: 40, capacity: 300, imageUrl: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800&q=80', organizerId: 'demo-org', ticketsSold: 5, status: 'active', minAge: 18, lineup: [{name: 'Solomun', time: '21:00'}, {name: 'Dixon', time: '00:00'}, {name: 'Ame', time: '02:30'}], venue: venueClub },
+    { id: 'ev3', title: 'Acid Rain', description: 'Acid techno en una bodega industrial de West End.', date: '2026-09-25', time: '22:00', duration: 9, location: 'The Foundry', address: '228 Wickham St, Fortitude Valley', city: 'Brisbane', genre: 'Acid', price: 38, capacity: 400, imageUrl: 'https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?w=800&q=80', organizerId: 'demo-org', ticketsSold: 4, status: 'active', minAge: 18, lineup: [{name: '999999999', time: '22:00'}, {name: 'Dax J', time: '00:30'}, {name: 'SPFDJ', time: '03:00'}], venue: venueWarehouse },
+    { id: 'ev4', title: 'Euphoria Open Air', description: 'Festival al aire libre junto al río. Tres escenarios bajo las estrellas de Brisbane.', date: '2026-10-02', time: '14:00', duration: 10, location: 'Riverstage', address: '59 Gardens Point Rd, City Botanic Gardens', city: 'Brisbane', genre: 'Trance', price: 89, capacity: 2000, imageUrl: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=800&q=80', organizerId: 'demo-org', ticketsSold: 12, status: 'active', minAge: 18, lineup: [{name: 'Armin van Buuren', time: '14:00'}, {name: 'Above & Beyond', time: '17:00'}, {name: 'Paul van Dyk', time: '20:00'}], venue: venueFestival },
+    { id: 'ev5', title: 'Minimal Affairs', description: 'Minimal techno en una galería de arte de New Farm.', date: '2026-10-10', time: '20:00', duration: 6, location: 'Jan Murphy Gallery', address: '486 Brunswick St, Fortitude Valley', city: 'Brisbane', genre: 'Minimal', price: 35, capacity: 200, imageUrl: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&q=80', organizerId: 'demo-org', ticketsSold: 3, status: 'active', minAge: 18, lineup: [{name: 'Ricardo Villalobos', time: '20:00'}, {name: 'Zip', time: '23:00'}], venue: venueGallery },
   ]
   sampleEvents.forEach(e => batch.set(doc(db, 'events', e.id), e))
 
@@ -954,8 +935,8 @@ export const seedData = async () => {
 
   // Notifications
   const notifs = [
-    { id: 'n1', userId: 'demo-raver', type: 'purchase', title: 'Ticket comprado: Berghain Nights', message: 'Tu entrada esta lista.', eventId: 'ev1', image: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=200&q=80', read: false, createdAt: '2026-08-20T15:30:00.000Z' },
-    { id: 'n2', userId: 'demo-raver', type: 'purchase', title: 'Ticket comprado: Euphoria Festival', message: 'Tu entrada esta lista.', eventId: 'ev4', image: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=200&q=80', read: false, createdAt: '2026-08-22T10:15:00.000Z' },
+    { id: 'n1', userId: 'demo-raver', type: 'purchase', title: 'Ticket comprado: Warehouse District', message: 'Tu entrada está lista.', eventId: 'ev1', image: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=200&q=80', read: false, createdAt: '2026-08-20T15:30:00.000Z' },
+    { id: 'n2', userId: 'demo-raver', type: 'purchase', title: 'Ticket comprado: Euphoria Open Air', message: 'Tu entrada está lista.', eventId: 'ev4', image: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=200&q=80', read: false, createdAt: '2026-08-22T10:15:00.000Z' },
   ]
   notifs.forEach(n => batch.set(doc(db, 'notifications', n.id), n))
 

@@ -65,7 +65,36 @@ export const getTopTracks = async (artistId, limit = 5) => {
 }
 
 /**
+ * Fallback: some underground artists have an empty /top endpoint on Deezer
+ * (licensing), yet their tracks exist via plain search. We query by name and
+ * keep only tracks credited to the same artist, so the player still has
+ * something real to play instead of showing an empty card.
+ * @param {string} name
+ * @param {number} limit
+ * @returns {Array} playable tracks (same shape as getTopTracks)
+ */
+export const searchTracksByArtist = async (name, limit = 5) => {
+  if (!name?.trim()) return []
+  const data = await request(`/search?q=${encodeURIComponent(name)}&limit=25`)
+  const tracks = data?.data || []
+  const target = name.trim().toLowerCase()
+  return tracks
+    .filter((t) => !!t.preview && (t.artist?.name || '').toLowerCase() === target)
+    .slice(0, limit)
+    .map((t) => ({
+      id: t.id,
+      name: t.title,
+      previewUrl: t.preview,
+      albumName: t.album?.title || '',
+      albumArt: t.album?.cover_medium || t.album?.cover || null,
+      duration: (t.duration || 30) * 1000,
+      deezerUrl: t.link || null,
+    }))
+}
+
+/**
  * Convenience: resolve an artist name straight to its playable tracks.
+ * Tries the artist's top tracks first, then falls back to a name search.
  * @param {string} name
  * @param {number} limit
  * @returns {{ artist: object, tracks: Array }|null}
@@ -73,6 +102,7 @@ export const getTopTracks = async (artistId, limit = 5) => {
 export const getArtistTracks = async (name, limit = 5) => {
   const artist = await findArtist(name)
   if (!artist) return null
-  const tracks = await getTopTracks(artist.id, limit)
+  let tracks = await getTopTracks(artist.id, limit)
+  if (tracks.length === 0) tracks = await searchTracksByArtist(artist.name, limit)
   return { artist, tracks }
 }

@@ -24,38 +24,46 @@
 .cs-list { padding: 3rem 0 4rem; display: flex; flex-direction: column; gap: 2px; }
 
 .cs-card {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 0;
+  display: grid; grid-template-columns: 42% 1fr; gap: 0;
   background: #141414; animation: fadeUp 0.6s ease both;
   transition: background 0.3s ease;
+  align-items: stretch;
 }
 .cs-card:hover { background: #1a1a1a; }
 .cs-card:nth-child(even) { direction: rtl; }
 .cs-card:nth-child(even) > * { direction: ltr; }
 
-.cs-card-visual { position: relative; height: 100%; min-height: 350px; overflow: hidden; }
+/* Image fills the full card height (align-items:stretch), so it always matches
+   the content column — no empty space, no undersized photo. */
+.cs-card-visual {
+  position: relative; overflow: hidden;
+  min-height: 280px;
+}
 .cs-card-visual img {
-  width: 100%; height: 100%; object-fit: cover;
-  filter: brightness(0.6) saturate(0.7);
+  position: absolute; inset: 0;
+  width: 100%; height: 100%; object-fit: cover; display: block;
+  filter: brightness(0.95) saturate(1.05);
   transition: all 0.6s cubic-bezier(0.16,1,0.3,1);
 }
 .cs-card:hover .cs-card-visual img {
-  filter: brightness(0.75) saturate(0.9); transform: scale(1.04);
+  filter: brightness(1.05) saturate(1.15); transform: scale(1.04);
 }
+/* Soft fade only on the edge that meets the text, so the image stays visible */
 .cs-card-visual-overlay {
   position: absolute; inset: 0;
-  background: linear-gradient(90deg, rgba(20,20,20,0.8) 0%, transparent 60%);
+  background: linear-gradient(90deg, transparent 70%, rgba(20,20,20,0.9) 100%);
 }
 .cs-card:nth-child(even) .cs-card-visual-overlay {
-  background: linear-gradient(-90deg, rgba(20,20,20,0.8) 0%, transparent 60%);
+  background: linear-gradient(-90deg, transparent 70%, rgba(20,20,20,0.9) 100%);
 }
 .cs-card-num {
-  position: absolute; bottom: 1.5rem; right: 1.5rem;
-  font-size: 4rem; font-weight: 900; color: rgba(255,255,255,0.06);
+  position: absolute; bottom: 1.25rem; right: 1.5rem;
+  font-size: 3.5rem; font-weight: 900; color: rgba(255,255,255,0.14);
   font-family: 'Courier New', monospace; line-height: 1;
 }
 
 .cs-card-content {
-  padding: 3rem; display: flex; flex-direction: column; justify-content: center;
+  padding: 2.5rem 3rem; display: flex; flex-direction: column; justify-content: center; gap: 0;
 }
 .cs-card-title {
   font-size: clamp(1.5rem, 3vw, 2.5rem); font-weight: 800;
@@ -95,7 +103,7 @@
   .cs-hero { padding: 8rem 0 3rem; }
   .cs-card { grid-template-columns: 1fr; }
   .cs-card:nth-child(even) { direction: ltr; }
-  .cs-card-visual { min-height: 220px; }
+  .cs-card-visual { height: 200px; max-height: 200px; }
   .cs-card-content { padding: 2rem; }
   .cs-countdown { gap: 0.5rem; }
   .cs-cd-item { min-width: 48px; padding: 0.5rem; }

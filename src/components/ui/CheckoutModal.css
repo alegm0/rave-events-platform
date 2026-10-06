@@ -60,6 +60,23 @@
 
 .co-err { font-size: 0.7rem; color: #ff6b47; }
 
+.co-testcard {
+  align-self: center;
+  background: none;
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  padding: 0.45rem 0.9rem;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.co-testcard:hover:not(:disabled) {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.4);
+}
+.co-testcard:disabled { opacity: 0.4; cursor: default; }
+
 .co-secure {
   display: flex;
   align-items: center;

@@ -12,6 +12,14 @@ import PreRaveBrief from '../components/venue/PreRaveBrief'
 import RaveCompanion from '../components/venue/RaveCompanion'
 import './EventDetail.css'
 
+// Reduce a name to up-to-2 initials for anonymous attendee avatars (privacy).
+const initials = (name = '') => {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return '?'
+  if (parts.length === 1) return parts[0].slice(0, 2)
+  return parts[0][0] + parts[parts.length - 1][0]
+}
+
 const EventDetail = () => {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -154,7 +162,7 @@ const EventDetail = () => {
               <div className="ed-info-card">
                 <FiCalendar className="ed-info-icon" />
                 <div>
-                  <strong>{new Date(event.date).toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long' })}</strong>
+                  <strong>{new Date(event.date).toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</strong>
                   <span>{event.time}{endTime ? ` → ${endTime.toLocaleDateString('es', { weekday: 'short', day: 'numeric', month: 'short' })} ${endTime.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}` : ''}</span>
                 </div>
               </div>
@@ -287,14 +295,29 @@ const EventDetail = () => {
             {goingCount > 0 && (
             <div className="ed-section">
               <h2 className="ed-section-title">🎉 {goingCount} {goingCount === 1 ? 'persona va' : 'personas van'}</h2>
+              {/* Privacy: show anonymous initials avatars, never full names */}
               {goingUsers.length > 0 && (
-                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                  {goingUsers.map(u => (
-                    <div key={u.id} style={{ padding: '0.3rem 0.8rem', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)' }}>
-                      {u.displayName}
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  {goingUsers.map((u, i) => (
+                    <div
+                      key={u.id}
+                      title="Asistente"
+                      style={{
+                        width: '2.2rem', height: '2.2rem', borderRadius: '50%',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        background: 'rgba(255,61,0,0.15)', border: '2px solid #0d0d0d',
+                        color: '#ff6a3d', fontSize: '0.7rem', fontWeight: 700,
+                        marginLeft: i === 0 ? 0 : '-0.6rem', textTransform: 'uppercase',
+                      }}
+                    >
+                      {initials(u.displayName)}
                     </div>
                   ))}
-                  {goingCount > 5 && <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)', alignSelf: 'center' }}>+{goingCount - 5} más</span>}
+                  {goingCount > goingUsers.length && (
+                    <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.45)', marginLeft: '0.8rem' }}>
+                      +{goingCount - goingUsers.length} más
+                    </span>
+                  )}
                 </div>
               )}
             </div>

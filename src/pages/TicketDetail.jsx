@@ -73,7 +73,7 @@ const TicketDetail = () => {
                   <div className="td-meta-item">
                     <FiCalendar />
                     <div>
-                      <strong>{event?.date ? new Date(event.date).toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long' }) : ''}</strong>
+                      <strong>{event?.date ? new Date(event.date).toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : ''}</strong>
                       <span>{event?.time || '23:00'}{event?.duration ? ` · ${event.duration}h` : ''}</span>
                     </div>
                   </div>

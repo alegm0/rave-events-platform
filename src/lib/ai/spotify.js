@@ -1,39 +1,22 @@
-// Spotify API Integration — Free tier (Client Credentials flow)
-// Searches for lineup artists and generates embedded playlists/previews
-// Requires: VITE_SPOTIFY_CLIENT_ID and VITE_SPOTIFY_CLIENT_SECRET in .env
+// Spotify integration (client side).
+//
+// The credentials never live here: the token exchange and the Spotify calls
+// happen in the serverless function at /api/spotify (see api/spotify.js). This
+// module just calls that endpoint, so nothing secret ships in the browser
+// bundle.
 
-const CLIENT_ID = import.meta.env.VITE_SPOTIFY_CLIENT_ID
-const CLIENT_SECRET = import.meta.env.VITE_SPOTIFY_CLIENT_SECRET
-
-let accessToken = null
-let tokenExpiry = 0
-
-/**
- * Get Spotify access token using Client Credentials flow (no user login needed)
- */
-const getToken = async () => {
-  if (accessToken && Date.now() < tokenExpiry) return accessToken
-
-  if (!CLIENT_ID || !CLIENT_SECRET) {
-    console.warn('Spotify credentials not configured')
-    return null
-  }
-
+// One request to our own proxy. Returns the `data` payload Spotify sent back,
+// or null when Spotify is not configured / the call failed — callers already
+// handle null by degrading gracefully.
+const proxy = async (params) => {
   try {
-    const res = await fetch('https://accounts.spotify.com/api/token', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Authorization': 'Basic ' + btoa(`${CLIENT_ID}:${CLIENT_SECRET}`)
-      },
-      body: 'grant_type=client_credentials'
-    })
-    const data = await res.json()
-    accessToken = data.access_token
-    tokenExpiry = Date.now() + (data.expires_in - 60) * 1000 // refresh 1min early
-    return accessToken
-  } catch (err) {
-    console.error('Spotify auth error:', err)
+    const qs = new URLSearchParams(params).toString()
+    const res = await fetch(`/api/spotify?${qs}`)
+    if (!res.ok) return null
+    const json = await res.json()
+    if (json.configured === false) return null
+    return json.data ?? null
+  } catch {
     return null
   }
 }
@@ -44,19 +27,14 @@ const getToken = async () => {
  * @returns {object|null} Artist data with id, name, image, genres, popularity, uri
  */
 export const searchArtist = async (name) => {
-  const token = await getToken()
-  if (!token) return null
+  if (!name?.trim()) return null
+  const data = await proxy({ action: 'search', q: name })
+  if (!data) return null
 
-  try {
-    const res = await fetch(
-      `https://api.spotify.com/v1/search?q=${encodeURIComponent(name)}&type=artist&limit=1`,
-      { headers: { 'Authorization': `Bearer ${token}` } }
-    )
-    const data = await res.json()
-    const artist = data.artists?.items?.[0]
-    if (!artist) return null
+  const artist = data.artists?.items?.[0]
+  if (!artist) return null
 
-    return {
+  return {
       id: artist.id,
       name: artist.name,
       image: artist.images?.[0]?.url || null,
@@ -64,10 +42,6 @@ export const searchArtist = async (name) => {
       popularity: typeof artist.popularity === 'number' ? artist.popularity : 0,
       uri: artist.uri,
       spotifyUrl: artist.external_urls?.spotify
-    }
-  } catch (err) {
-    console.error('Spotify search error:', err)
-    return null
   }
 }
 
@@ -77,55 +51,38 @@ export const searchArtist = async (name) => {
  * @returns {Array} Top tracks with preview_url, name, album art
  */
 export const getArtistTopTracks = async (artistId) => {
-  const token = await getToken()
-  if (!token) return []
+  if (!artistId) return []
+  const data = await proxy({ action: 'top-tracks', id: artistId })
+  if (!data) return []
 
-  try {
-    const res = await fetch(
-      `https://api.spotify.com/v1/artists/${artistId}/top-tracks?market=CO`,
-      { headers: { 'Authorization': `Bearer ${token}` } }
-    )
-    const data = await res.json()
-    return (data.tracks || []).slice(0, 5).map(t => ({
-      id: t.id,
-      name: t.name,
-      previewUrl: t.preview_url,
-      albumArt: t.album?.images?.[1]?.url || t.album?.images?.[0]?.url,
-      albumName: t.album?.name,
-      duration: t.duration_ms,
-      uri: t.uri,
-      spotifyUrl: t.external_urls?.spotify
-    }))
-  } catch (err) {
-    console.error('Spotify top tracks error:', err)
-    return []
-  }
+  return (data.tracks || []).slice(0, 5).map(t => ({
+    id: t.id,
+    name: t.name,
+    previewUrl: t.preview_url,
+    albumArt: t.album?.images?.[1]?.url || t.album?.images?.[0]?.url,
+    albumName: t.album?.name,
+    duration: t.duration_ms,
+    uri: t.uri,
+    spotifyUrl: t.external_urls?.spotify
+  }))
 }
 
 /**
  * Get related artists (for recommendations)
  */
 export const getRelatedArtists = async (artistId) => {
-  const token = await getToken()
-  if (!token) return []
+  if (!artistId) return []
+  const data = await proxy({ action: 'related', id: artistId })
+  if (!data) return []
 
-  try {
-    const res = await fetch(
-      `https://api.spotify.com/v1/artists/${artistId}/related-artists`,
-      { headers: { 'Authorization': `Bearer ${token}` } }
-    )
-    const data = await res.json()
-    return (data.artists || []).slice(0, 5).map(a => ({
-      id: a.id,
-      name: a.name,
-      image: a.images?.[1]?.url,
-      genres: a.genres,
-      popularity: a.popularity,
-      spotifyUrl: a.external_urls?.spotify
-    }))
-  } catch (err) {
-    return []
-  }
+  return (data.artists || []).slice(0, 5).map(a => ({
+    id: a.id,
+    name: a.name,
+    image: a.images?.[1]?.url,
+    genres: a.genres,
+    popularity: a.popularity,
+    spotifyUrl: a.external_urls?.spotify
+  }))
 }
 
 /**
@@ -203,6 +160,16 @@ export const generateEventPlaylist = async (lineup) => {
 }
 
 /**
- * Check if Spotify is configured
+ * Check if Spotify is configured. The client can't see the secret, so it asks
+ * the proxy: a harmless search that reports whether the server has credentials.
  */
-export const isSpotifyConfigured = () => !!(CLIENT_ID && CLIENT_SECRET)
+export const isSpotifyConfigured = async () => {
+  try {
+    const res = await fetch('/api/spotify?action=search&q=test')
+    if (!res.ok) return false
+    const json = await res.json()
+    return json.configured !== false
+  } catch {
+    return false
+  }
+}

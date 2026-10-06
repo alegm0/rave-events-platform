@@ -56,7 +56,7 @@ const PreRaveBrief = ({ event, onMeetLineup }) => {
           <span className="brief-kicker">Pre-Rave Brief</span>
           <h2 className="brief-title">Tu noche · {whenLabel}</h2>
         </div>
-        <span className="brief-ai">Organizado para ti</span>
+        <span className="brief-ai">{brief.minimal ? 'Vista esencial' : 'Organizado para ti'}</span>
       </div>
 
       {/* Timetable */}
@@ -76,8 +76,8 @@ const PreRaveBrief = ({ event, onMeetLineup }) => {
         </ul>
       </div>
 
-      {/* Venue */}
-      {brief.setting && (
+      {/* Venue — hidden in minimal mode */}
+      {!brief.minimal && brief.setting && (
         <div className="brief-block">
           <h3 className="brief-block-title"><FiMapPin /> Tu venue</h3>
           <p className="brief-setting">{brief.setting}</p>
@@ -85,7 +85,7 @@ const PreRaveBrief = ({ event, onMeetLineup }) => {
       )}
 
       {/* Accessibility — only if user set preferences */}
-      {brief.accessibility.length > 0 && (
+      {!brief.minimal && brief.accessibility.length > 0 && (
         <div className="brief-block">
           <h3 className="brief-block-title">Según tus preferencias</h3>
           <ul className="brief-acc">
@@ -108,8 +108,8 @@ const PreRaveBrief = ({ event, onMeetLineup }) => {
         </div>
       )}
 
-      {/* Music discovery */}
-      {discovery.total > 0 && (
+      {/* Music discovery — hidden in minimal mode */}
+      {!brief.minimal && discovery.total > 0 && (
         <div className="brief-discovery">
           <div className="brief-disc-text">
             <FiHeadphones />

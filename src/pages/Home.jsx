@@ -195,12 +195,12 @@ const Home = () => {
                   </svg>
                 </div>
                 <h3 className="profile-title">Raver</h3>
-                <p className="profile-desc">Descubre eventos, compra tickets digitales y gestiona tu experiencia en la escena.</p>
+                <p className="profile-desc">Encuentra tu próxima noche. Entra con un QR, no con papeles, y lleva tu historial de fiestas en el bolsillo.</p>
                 <ul className="profile-list">
-                  <li><FiCheck /> Explorar eventos por fecha y ubicación</li>
-                  <li><FiCheck /> Compra de tickets con código QR</li>
-                  <li><FiCheck /> Historial de eventos asistidos</li>
-                  <li><FiCheck /> Calendario personalizado</li>
+                  <li><FiCheck /> Explora line-ups por fecha, ciudad y género</li>
+                  <li><FiCheck /> Entrada digital con QR único e intransferible</li>
+                  <li><FiCheck /> Tu historial de eventos y artistas favoritos</li>
+                  <li><FiCheck /> Calendario con tus próximas fiestas</li>
                 </ul>
                 <Link to="/register"><Button variant="outline" fullWidth>Registrarse como Raver</Button></Link>
               </div>
@@ -215,12 +215,12 @@ const Home = () => {
                   </svg>
                 </div>
                 <h3 className="profile-title">Organizador</h3>
-                <p className="profile-desc">Crea eventos, gestiona ventas y analiza el rendimiento de tus producciones.</p>
+                <p className="profile-desc">Monta tu evento, vende entradas y controla la puerta en tiempo real. Toda tu producción en un solo panel.</p>
                 <ul className="profile-list">
-                  <li><FiCheck /> Crear y publicar eventos</li>
-                  <li><FiCheck /> Sistema de venta de tickets</li>
-                  <li><FiCheck /> Scanner QR para validar entradas</li>
-                  <li><FiCheck /> Dashboard con métricas</li>
+                  <li><FiCheck /> Publica eventos con line-up, mapa y precios por fase</li>
+                  <li><FiCheck /> Venta de tickets y control de aforo automático</li>
+                  <li><FiCheck /> Scanner QR para validar entradas en la puerta</li>
+                  <li><FiCheck /> Dashboard con ventas, asistencia e ingresos</li>
                 </ul>
                 <Link to="/register"><Button fullWidth>Registrarse como Organizador</Button></Link>
               </div>

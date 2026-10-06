@@ -75,7 +75,7 @@ const MyTickets = () => {
                     </div>
                     <h3 className="mt-ticket-title">{t.event?.title || 'Evento'}</h3>
                     <div className="mt-ticket-meta">
-                      <span><FiCalendar /> {t.event?.date ? new Date(t.event.date).toLocaleDateString('es', { weekday: 'short', day: 'numeric', month: 'short' }) : ''}</span>
+                      <span><FiCalendar /> {t.event?.date ? new Date(t.event.date).toLocaleDateString('es', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : ''}</span>
                       <span><FiClock /> {t.event?.time || '23:00'}</span>
                       <span><FiMapPin /> {t.event?.location}</span>
                     </div>

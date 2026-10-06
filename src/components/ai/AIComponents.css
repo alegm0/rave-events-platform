@@ -135,6 +135,20 @@
 }
 .ai-spotify-link:hover { color: #1db954; }
 
+.ai-save-artist {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  color: rgba(255,255,255,0.3);
+  transition: color 0.2s, transform 0.15s;
+}
+.ai-save-artist:hover { color: #f5c518; transform: scale(1.15); }
+.ai-save-artist.is-saved { color: #f5c518; }
+.ai-save-artist.is-saved svg { fill: #f5c518; }
+
 .ai-tracks {
   display: flex;
   flex-direction: column;

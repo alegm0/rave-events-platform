@@ -52,6 +52,16 @@ const EditEvent = () => {
         toast.error('Evento no encontrado')
         return
       }
+      // A finished event can't be edited — redirect to its analytics instead.
+      const [h, m] = (event.time || '23:00').split(':').map((n) => parseInt(n, 10) || 0)
+      const start = new Date(`${event.date}T00:00:00`)
+      start.setHours(h, m, 0, 0)
+      const ended = new Date(start.getTime() + (event.duration || 6) * 3600000) < new Date()
+      if (ended) {
+        navigate(`/organizer/event/${id}/analytics`)
+        toast.info('Este evento ya finalizó y no se puede editar')
+        return
+      }
       setForm({
         title: event.title || '',
         description: event.description || '',

@@ -39,7 +39,22 @@ const Dashboard = () => {
   }, [currentUser])
 
   const hasEvents = events.length > 0
-  const topEvent = eventsWithTickets.sort((a, b) => b.tickets - a.tickets)[0]
+
+  // Has an event already finished? (start + duration in the past)
+  const hasEnded = (e) => {
+    if (!e?.date) return false
+    const [h, m] = (e.time || '23:00').split(':').map((n) => parseInt(n, 10) || 0)
+    const start = new Date(`${e.date}T00:00:00`)
+    start.setHours(h, m, 0, 0)
+    return new Date(start.getTime() + (e.duration || 6) * 3600000) < new Date()
+  }
+
+  // Featured event: prefer an UPCOMING event (best-selling of the ones still to
+  // come). Only fall back to a past event if the organizer has no upcoming ones.
+  const upcomingByTickets = eventsWithTickets.filter((e) => !hasEnded(e)).sort((a, b) => b.tickets - a.tickets)
+  const pastByTickets = eventsWithTickets.filter((e) => hasEnded(e)).sort((a, b) => b.tickets - a.tickets)
+  const topEvent = upcomingByTickets[0] || pastByTickets[0]
+  const topEventEnded = topEvent ? hasEnded(topEvent) : false
 
   // Generative art canvas
   const canvasRef = useRef(null)
@@ -194,56 +209,7 @@ const Dashboard = () => {
 
         {hasEvents && (
           <>
-            {/* Stats */}
-            <div className="dash-stats">
-              {[
-                { icon: <FiCalendar />, value: stats.totalEvents, label: 'Eventos', color: '#ff3d00' },
-                { icon: <FiUsers />, value: stats.totalTickets, label: 'Tickets vendidos', color: '#4caf50' },
-                { icon: <FiDollarSign />, value: `$${stats.totalRevenue.toLocaleString()}`, label: 'Ingresos', color: '#ff9800' },
-                { icon: <FiTrendingUp />, value: stats.upcoming, label: 'Próximos', color: '#2196f3' },
-              ].map((s, i) => (
-                <div key={i} className="dash-stat-card">
-                  <div className="dash-stat-top">
-                    <div className="dash-stat-icon" style={{ color: s.color, background: `${s.color}15` }}>{s.icon}</div>
-                    <span className="dash-stat-label">{s.label}</span>
-                  </div>
-                  <div className="dash-stat-val">{s.value}</div>
-                </div>
-              ))}
-            </div>
-
-            {/* Featured event */}
-            {topEvent && (
-              <div className="dash-featured">
-                <div className="dash-featured-img">
-                  <img src={topEvent.imageUrl || 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800'} alt="" />
-                  <div className="dash-featured-overlay"></div>
-                </div>
-                <div className="dash-featured-content">
-                  <span className="dash-featured-label">Evento destacado</span>
-                  <h2 className="dash-featured-title">{topEvent.title}</h2>
-                  <div className="dash-featured-meta">
-                    <span><FiCalendar /> {new Date(topEvent.date).toLocaleDateString('es', { day: 'numeric', month: 'long' })}</span>
-                    <span><FiMapPin /> {topEvent.location}</span>
-                  </div>
-                  <div className="dash-featured-stats">
-                    <div><strong>{topEvent.tickets}</strong> tickets</div>
-                    <div><strong>{'$' + topEvent.revenue.toLocaleString()}</strong> ingresos</div>
-                    <div><strong>{topEvent.pct}%</strong> vendido</div>
-                  </div>
-                  <div className="dash-featured-bar">
-                    <div className="dash-featured-bar-fill" style={{ width: `${Math.min(topEvent.pct, 100)}%` }}></div>
-                  </div>
-                  <div className="dash-featured-actions">
-                    <Link to={`/organizer/event/${topEvent.id}/analytics`}><Button variant="ghost" size="sm" icon={<FiBarChart2 />}>Analytics</Button></Link>
-                    <Link to={`/organizer/event/${topEvent.id}/live`}><Button variant="ghost" size="sm" icon={<FiActivity />}>En vivo</Button></Link>
-                    <Link to={`/organizer/scanner/${topEvent.id}`}><Button size="sm" icon={<FiCrosshair />}>Scanner</Button></Link>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Quick actions */}
+            {/* Quick actions — the things you actually DO, up top */}
             <div className="dash-actions">
               <Link to="/organizer/create-event" className="dash-action-card">
                 <div className="dash-action-icon"><FiPlus /></div>
@@ -268,6 +234,59 @@ const Dashboard = () => {
               </Link>
             </div>
 
+            {/* Summary stats — read-only info, clearly not clickable */}
+            <div className="dash-stats">
+              <span className="dash-stats-caption">Resumen de tu actividad</span>
+              <div className="dash-stats-grid">
+                {[
+                  { icon: <FiCalendar />, value: stats.totalEvents, label: 'Eventos', color: '#ff3d00' },
+                  { icon: <FiUsers />, value: stats.totalTickets, label: 'Tickets vendidos', color: '#4caf50' },
+                  { icon: <FiDollarSign />, value: `AUD $${stats.totalRevenue.toLocaleString()}`, label: 'Ingresos', color: '#ff9800' },
+                  { icon: <FiTrendingUp />, value: stats.upcoming, label: 'Próximos', color: '#2196f3' },
+                ].map((s, i) => (
+                  <div key={i} className="dash-stat-card">
+                    <div className="dash-stat-top">
+                      <div className="dash-stat-icon" style={{ color: s.color, background: `${s.color}15` }}>{s.icon}</div>
+                      <span className="dash-stat-label">{s.label}</span>
+                    </div>
+                    <div className="dash-stat-val">{s.value}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Featured event */}
+            {topEvent && (
+              <div className="dash-featured">
+                <div className="dash-featured-img">
+                  <img src={topEvent.imageUrl || 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800'} alt="" />
+                  <div className="dash-featured-overlay"></div>
+                </div>
+                <div className="dash-featured-content">
+                  <span className="dash-featured-label">{topEventEnded ? 'Tu último evento' : 'Evento destacado'}</span>
+                  <h2 className="dash-featured-title">{topEvent.title}</h2>
+                  <div className="dash-featured-meta">
+                    <span><FiCalendar /> {new Date(topEvent.date).toLocaleDateString('es', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                    <span><FiMapPin /> {topEvent.location}</span>
+                  </div>
+                  <div className="dash-featured-stats">
+                    <div><strong>{topEvent.tickets}</strong> tickets</div>
+                    <div><strong>{'AUD $' + topEvent.revenue.toLocaleString()}</strong> ingresos</div>
+                    <div><strong>{topEvent.pct}%</strong> vendido</div>
+                  </div>
+                  <div className="dash-featured-bar">
+                    <div className="dash-featured-bar-fill" style={{ width: `${Math.min(topEvent.pct, 100)}%` }}></div>
+                  </div>
+                  <div className="dash-featured-actions">
+                    <Link to={`/organizer/event/${topEvent.id}/analytics`}><Button variant="ghost" size="sm" icon={<FiBarChart2 />}>Analytics</Button></Link>
+                    {/* Live & Scanner only make sense before the event ends */}
+                    {!topEventEnded && <Link to={`/organizer/event/${topEvent.id}/live`}><Button variant="ghost" size="sm" icon={<FiActivity />}>En vivo</Button></Link>}
+                    {!topEventEnded && <Link to={`/organizer/scanner/${topEvent.id}`}><Button size="sm" icon={<FiCrosshair />}>Scanner</Button></Link>}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* All events */}
             {eventsWithTickets.length > 1 && (
               <div className="dash-section">
@@ -285,7 +304,7 @@ const Dashboard = () => {
                       </div>
                       <div className="dash-event-metrics">
                         <div className="dash-metric"><span className="dash-metric-val">{e.tickets}</span><span className="dash-metric-label">tickets</span></div>
-                        <div className="dash-metric"><span className="dash-metric-val">{'$' + e.revenue}</span><span className="dash-metric-label">ingresos</span></div>
+                        <div className="dash-metric"><span className="dash-metric-val">{'AUD $' + (e.revenue || 0).toLocaleString()}</span><span className="dash-metric-label">ingresos</span></div>
                         <div className="dash-metric">
                           <span className="dash-metric-val">{e.pct}%</span>
                           <span className="dash-metric-label">vendido</span>

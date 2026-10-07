@@ -1,32 +1,20 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { getComfortProfile } from '../../lib/db'
-import { getHighlights, buildVenuePlan, SERVICE_META } from '../../lib/venue'
+import { getHighlights, buildVenuePlan, SERVICE_META, SERVICE_EMOJI, ZONE_EMOJI, ZONE_TYPE_LABEL } from '../../lib/venue'
 import { FiDroplet, FiLogOut, FiHeart, FiMapPin, FiCornerUpRight } from 'react-icons/fi'
-import { MdWc, MdChair, MdLocalHospital, MdMeetingRoom, MdSmokingRooms } from 'react-icons/md'
-import WarehouseFloorPlan, { warehouseAnchors, warehouseRoute } from './floorplans/warehouse'
+import { MdWc, MdChair, MdLocalHospital, MdMeetingRoom, MdSmokingRooms, MdLocalBar } from 'react-icons/md'
 import './VenueMap.css'
 import './floorplans/floorplan.css'
 
-// Drawn floor plans by venue kind. When a venue matches, we render a real
-// top-down plan instead of generic zone rectangles. Others fall back to tiles.
-const FLOOR_PLANS = {
-  warehouse: WarehouseFloorPlan,
-}
-const detectFloorPlan = (venue) => {
-  // `kind` is set by the organizer's venue editor; the setting string is the
-  // legacy signal for venues that came from an auto-applied template.
-  if (venue?.kind && FLOOR_PLANS[venue.kind]) return venue.kind
-  const s = (venue?.setting || '').toLowerCase()
-  if (s.includes('warehouse')) return 'warehouse'
-  return null
-}
-
-// Concert-style seating-map look: solid tiled zones + clean pins.
-// Coordinates are 0-100 (%), not geographic. Purely for orientation.
+// Attendee venue map. The visual reference is a premium simplified floor plan +
+// wayfinding system, NOT a geographic map. Coordinates are 0-100 (%), only for
+// orientation. Crowd/dance areas are subtle floor regions; DJ booths/stages are
+// small anchored structures; amenities are compact dark labels (emoji + text).
 
 const SERVICE_ICONS = {
   entrance: <MdMeetingRoom />,
+  bar: <MdLocalBar />,
   water: <FiDroplet />,
   toilet: <MdWc />,
   firstaid: <MdLocalHospital />,
@@ -35,15 +23,42 @@ const SERVICE_ICONS = {
   exit: <FiLogOut />,
 }
 
-// Crisp glyphs drawn inside pins (SVG, ~4px box centered at 0,0).
-const PIN_GLYPH = {
-  water: <path d="M0-2C1.3-.4 2 .6 2 1.5a2 2 0 0 1-4 0C0 .6.7-.4 0-2z" />,
-  toilet: <g><circle cx="-1.1" cy="-1.3" r=".7" /><path d="M-1.7-.5h1.2l.3 2h-1.8z" /><circle cx="1.1" cy="-1.3" r=".7" /><rect x=".5" y="-.5" width="1.2" height="2" rx=".2" /></g>,
-  firstaid: <g><rect x="-.5" y="-1.8" width="1" height="3.6" rx=".2" /><rect x="-1.8" y="-.5" width="3.6" height="1" rx=".2" /></g>,
-  rest: <g><rect x="-1.6" y="-.3" width="3.2" height=".9" rx=".2" /><rect x="-1.5" y=".4" width=".5" height="1.5" /><rect x="1" y=".4" width=".5" height="1.5" /><rect x="-1.9" y="-1.3" width=".5" height="1.1" /></g>,
-  exit: <path d="M-1.8-1.8h2v1h-1v1.6h1v1h-2zM.8 0l1.4-1.1v.7h.9v.9h-.9v.7z" />,
-  entrance: <path d="M-1.7-1.8h3v3.6h-3v-.8h2v-2h-2z" />,
-  smoking: <g><rect x="-1.9" y="0.4" width="3" height="1.1" rx=".2" /><rect x="1.3" y="0.4" width=".6" height="1.1" rx=".2" /><rect x="-.4" y="-1.8" width=".5" height="1.8" /></g>,
+// Short labels for the compact map markers (keep them scannable).
+const SERVICE_SHORT = {
+  entrance: 'Entrada',
+  bar: 'Bar',
+  water: 'Agua',
+  toilet: 'WC',
+  firstaid: 'First Aid',
+  rest: 'Respiro',
+  smoking: 'Fumar',
+  exit: 'Salida',
+}
+
+// Location + accessibility copy per service, surfaced in the detail panel.
+// Accessibility is communicated with explicit symbols, never color alone.
+const serviceDetail = (s) => {
+  const d = { where: null, access: [] }
+  if (typeof s.walkMin === 'number' && s.walkMin > 0) d.where = `A ~${s.walkMin} min a pie`
+  if (s.accessible) d.access.push({ sym: '♿', text: s.type === 'toilet' ? 'Baño accesible disponible' : 'Acceso sin escalones' })
+  if (s.type === 'water') d.access.push({ sym: '✓', text: 'Agua potable gratis' })
+  if (s.type === 'smoking') d.access.push({ sym: '!', text: 'Área para fumar — separada de la zona tranquila' })
+  if (s.type === 'exit') d.access.push({ sym: '!', text: 'Salida de emergencia' })
+  return d
+}
+
+const zoneDetail = (z) => {
+  const d = { where: null, access: [] }
+  if (z.type === 'quiet') {
+    d.where = 'Zona de menor volumen'
+    d.access.push({ sym: '♿', text: 'Acceso sin escalones' })
+    d.access.push({ sym: '◐', text: 'Nivel de sonido más bajo' })
+  } else if (z.type === 'booth' || z.type === 'stage') {
+    d.where = 'Zona de performance'
+  } else if (z.type === 'floor') {
+    d.where = 'Área principal de público'
+  }
+  return d
 }
 
 const VenueMap = ({ venue }) => {
@@ -63,9 +78,6 @@ const VenueMap = ({ venue }) => {
   const anyHighlight = serviceIds.size > 0 || zoneIds.size > 0
   const outdoor = venue.layout === 'outdoor'
 
-  // Map-highlighting preferences the user turned on (these are the ones that
-  // should surface pins). If some are on but produced no highlight, this venue
-  // simply doesn't offer them — we say so instead of leaving the user guessing.
   const MAP_PREF_LABELS = {
     quieterAreas: 'zonas tranquilas',
     stepFree: 'rutas sin escalones',
@@ -87,22 +99,12 @@ const VenueMap = ({ venue }) => {
     }
   }
 
-  const floorPlanKey = detectFloorPlan(venue)
-  const FloorPlan = floorPlanKey ? FLOOR_PLANS[floorPlanKey] : null
+  // Services pinned to the venue perimeter read as wayfinding markers.
+  const PERIMETER = new Set(['entrance', 'exit'])
 
-  // Coordinates of the current selection, to draw a "you are here" route on the plan
-  const selectedPoint = (() => {
-    if (!selected) return null
-    const d = selected.data
-    if (selected.kind === 'service' && typeof d.x === 'number') return { x: d.x, y: d.y }
-    if (selected.kind === 'zone' && typeof d.x === 'number') return { x: d.x + (d.w || 0) / 2, y: d.y + (d.h || 0) / 2 }
-    // floor-plan zones may not carry x/w; map by id to an anchor
-    if (FloorPlan && warehouseAnchors[d.id]) return warehouseAnchors[d.id]
-    return null
-  })()
-  const origin = FloorPlan ? warehouseAnchors.entrance : null
-  const routePts = FloorPlan && origin && selectedPoint ? warehouseRoute(origin, selectedPoint) : null
-  const routeD = routePts ? routePts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x} ${p.y}`).join(' ') : null
+  const detail = selected
+    ? (selected.kind === 'service' ? serviceDetail(selected.data) : zoneDetail(selected.data))
+    : null
 
   return (
     <div className="venue">
@@ -117,69 +119,73 @@ const VenueMap = ({ venue }) => {
       <div className="venue-map-wrap">
         <svg viewBox="0 0 100 100" className={`venue-svg ${outdoor ? 'is-outdoor' : 'is-indoor'}`}
           preserveAspectRatio="xMidYMid meet" role="img" aria-label="Plano del venue">
-          <defs>
-            <filter id="vm-glow" x="-60%" y="-60%" width="220%" height="220%">
-              <feGaussianBlur stdDeviation="1" result="b" />
-              <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
-            </filter>
-          </defs>
 
-          {/* Drawn floor plan (base layer) when we have one for this venue kind */}
-          {FloorPlan && <FloorPlan />}
+          {/* Subtle venue perimeter so amenities never float in empty space.
+              Dashed for open-air, solid-thin for indoor. */}
+          <rect x="2" y="2" width="96" height="96" rx="2"
+            className={`vm-perimeter ${outdoor ? 'is-outdoor' : 'is-indoor'}`} />
 
-          {/* Route from entrance to the selected point (floor-plan venues) */}
-          {routeD && (
-            <>
-              <path d={routeD} className="fpm-route-shadow" />
-              <path d={routeD} className="fpm-route" />
-              <g transform={`translate(${origin.x} ${origin.y})`} className="fpm-here">
-                <circle r="3.2" className="fpm-here-pulse" />
-                <circle r="1.5" className="fpm-here-dot" />
-              </g>
-            </>
-          )}
-
-          {/* Generic zone tiles — only when there is no drawn floor plan */}
-          {!FloorPlan && venue.zones.map((z) => {
+          {/* Zones: floor = subtle region, booth/stage = small anchored structure,
+              quiet = distinct subtle region. */}
+          {venue.zones.map((z) => {
             const hl = zoneIds.has(z.id)
             const sel = selected?.kind === 'zone' && selected.data.id === z.id
             const dim = selected && !sel
-            const isStage = z.type === 'stage'
+            const isBooth = z.type === 'booth' || z.type === 'stage'
             return (
               <g key={z.id}
                  className={`vm-zone-g ${hl ? 'is-hl' : ''} ${sel ? 'is-sel' : ''} ${dim ? 'is-dim' : ''}`}
                  onClick={() => selectZone(z)} style={{ cursor: 'pointer' }}>
-                <rect x={z.x} y={z.y} width={z.w} height={z.h} rx="1.2"
+                <rect x={z.x} y={z.y} width={z.w} height={z.h} rx={isBooth ? 0.8 : 1.4}
                   className={`vm-zone vm-zone--${z.type}`} />
-                {/* stage front-of-house bar */}
-                {isStage && <rect x={z.x + 2} y={z.y + z.h - 3} width={z.w - 4} height="1.6" rx=".6" className="vm-stage-bar" />}
-                <text x={z.x + z.w / 2} y={z.y + 5} className={`vm-zone-label ${isStage ? 'is-stage' : ''}`}
-                  dominantBaseline="middle" textAnchor="middle">{z.label}</text>
+                {isBooth && (
+                  <text x={z.x + z.w / 2} y={z.y + z.h / 2} className="vm-zone-label is-booth"
+                    dominantBaseline="central" textAnchor="middle">{ZONE_EMOJI[z.type] || '🎧'} {z.label}</text>
+                )}
+                {!isBooth && (
+                  <text x={z.x + z.w / 2} y={z.y + z.h / 2} className={`vm-zone-label vm-zone-label--${z.type}`}
+                    dominantBaseline="central" textAnchor="middle">{z.label}</text>
+                )}
               </g>
             )
           })}
 
-          {/* service pins */}
+          {/* Amenities: compact dark labels (emoji + text), no teardrop pins. */}
           {venue.services.map((s) => {
             const hl = serviceIds.has(s.id)
             const sel = selected?.kind === 'service' && selected.data.id === s.id
             const dim = selected && !sel
+            const perim = PERIMETER.has(s.type)
+            // Base short label, plus a qualifier pulled from the service's own
+            // label when present (e.g. "Agua (oeste)" → "Agua O") so duplicated
+            // services like two water points don't render as identical chips.
+            const base = SERVICE_SHORT[s.type] || SERVICE_META[s.type]?.label || ''
+            const qual = (s.label.match(/\(([^)]+)\)/)?.[1] || '').trim()
+            // Compact the qualifier: single direction words → initial (oeste→O),
+            // short words kept as-is.
+            const qualShort = qual
+              ? (qual.length > 3 && /^(oeste|este|norte|sur|centro)$/i.test(qual)
+                  ? qual.charAt(0).toUpperCase()
+                  : qual)
+              : ''
+            const short = qualShort ? `${base} ${qualShort}` : base
+            // approximate label width so the dark chip hugs the text
+            const w = Math.max(13, 6 + short.length * 2.1)
             return (
               <g key={s.id} transform={`translate(${s.x} ${s.y})`}
-                className={`vm-pin vm-pin--${s.type} ${hl ? 'is-hl' : ''} ${sel ? 'is-sel' : ''} ${dim ? 'is-dim' : ''} ${s.accessible ? 'is-acc' : ''}`}
+                className={`vm-mark vm-mark--${s.type} ${hl ? 'is-hl' : ''} ${sel ? 'is-sel' : ''} ${dim ? 'is-dim' : ''} ${perim ? 'is-perim' : ''} ${s.accessible ? 'is-acc' : ''}`}
                 onClick={() => selectService(s)} style={{ cursor: 'pointer' }}>
-                <path d="M0 3 C-2.4 .3 -3-1 -3-2.2 A3 3 0 0 1 3-2.2 C3-1 2.4 .3 0 3Z"
-                  className="vm-pin-body" filter={hl || sel ? 'url(#vm-glow)' : undefined} />
-                <circle cx="0" cy="-2.2" r="1.9" className="vm-pin-disc" />
-                <g transform="translate(0 -2.2) scale(0.6)" className="vm-pin-glyph">{PIN_GLYPH[s.type]}</g>
-                {s.accessible && <circle cx="2.1" cy="-4" r="1" className="vm-pin-acc" />}
+                <rect x={-w / 2} y="-2.6" width={w} height="5.2" rx="1" className="vm-mark-chip" />
+                <text x={-w / 2 + 2.6} y="0.1" dominantBaseline="central" textAnchor="start" className="vm-mark-emoji">{SERVICE_EMOJI[s.type] || '📍'}</text>
+                <text x={-w / 2 + 6.2} y="0.1" dominantBaseline="central" textAnchor="start" className="vm-mark-text">{short}</text>
+                {s.accessible && <text x={w / 2 - 2} y="0.1" dominantBaseline="central" textAnchor="middle" className="vm-mark-acc">♿</text>}
               </g>
             )
           })}
         </svg>
       </div>
 
-      {/* Selection info panel (concert-map style) */}
+      {/* Selection detail panel: name + location + accessibility (symbols). */}
       <div className={`vm-info ${selected ? 'is-active' : ''}`}>
         {selected ? (
           <>
@@ -190,31 +196,27 @@ const VenueMap = ({ venue }) => {
             </div>
             <div className="vm-info-body">
               <strong>{selected.data.label}</strong>
-              <span>
+              <span className="vm-info-type">
                 {selected.kind === 'zone'
-                  ? (selected.data.type === 'stage' ? 'Escenario' : selected.data.type === 'quiet' ? 'Zona tranquila' : 'Zona')
+                  ? (ZONE_TYPE_LABEL[selected.data.type] || 'Zona')
                   : SERVICE_META[selected.data.type]?.label}
-                {selected.data.accessible && ' · accesible'}
-                {typeof selected.data.walkMin === 'number' && selected.data.walkMin > 0 && ` · a ~${selected.data.walkMin} min`}
+                {detail?.where && ` · ${detail.where}`}
               </span>
+              {detail?.access?.length > 0 && (
+                <ul className="vm-info-access">
+                  {detail.access.map((a, i) => (
+                    <li key={i}><span className="vm-info-sym">{a.sym}</span>{a.text}</li>
+                  ))}
+                </ul>
+              )}
             </div>
             {(zoneIds.has(selected.data.id) || serviceIds.has(selected.data.id)) && (
-              <span className="vm-info-rec">Recomendado para ti</span>
+              <span className="vm-info-rec">Para ti</span>
             )}
           </>
         ) : (
           <span className="vm-info-hint">Toca una zona o un servicio para ver los detalles</span>
         )}
-      </div>
-
-      {/* Legend */}
-      <div className="venue-legend">
-        {Object.entries(SERVICE_META).map(([type, meta]) => (
-          <span key={type} className="venue-legend-item">
-            <span className={`venue-legend-pin venue-pin--${type}`} />
-            {meta.label}
-          </span>
-        ))}
       </div>
 
       {/* My Venue Plan */}
@@ -225,9 +227,6 @@ const VenueMap = ({ venue }) => {
             <span className="venue-plan-because">Ajustado a: {reasons.join(' · ')}</span>
           )}
         </div>
-        {FloorPlan && (
-          <p className="venue-plan-tip"><FiMapPin /> Toca un paso para ver la ruta en el mapa</p>
-        )}
         <ol className="venue-plan-list">
           {plan.map((p, i) => {
             const isSel = selected && selected.data.id === p.id

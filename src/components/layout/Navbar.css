@@ -43,6 +43,10 @@
 .mobile-auth { display: flex; flex-direction: column; gap: 0.5rem; padding-top: 0.5rem; }
 .mobile-auth a { width: 100%; }
 
+/* Hidden by default (desktop); the media query below reveals it on mobile.
+   This base rule MUST come before the media query so the override wins. */
+.mobile-menu { display: none; }
+
 @media (max-width: 968px) {
   .desktop-menu { display: none; }
   .mobile-toggle { display: block; }
@@ -62,8 +66,6 @@
   .mobile-link:hover { color: #fff; }
   .mobile-link.logout { color: #ff3d00; }
 }
-
-.mobile-menu { display: none; }
 
 
 /* ═══ Notifications ═══ */

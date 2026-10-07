@@ -56,8 +56,17 @@ export const calculateDynamicPrice = (event, tickets = []) => {
   else if (velocityRatio > 1.5) velocityMultiplier = 1.1
   else if (velocityRatio < 0.3) velocityMultiplier = 0.85 // Slow sales — discount
 
+  // ── Cold start ──
+  // A brand-new event with (almost) no sales and plenty of runway hasn't had a
+  // chance to sell yet. Reacting with a discount on day one is bad advice and
+  // not supported by data. In that case we hold the price steady instead of
+  // treating "no data" as "stalled sales".
+  const coldStart = sold <= 1 && daysUntilEvent > 14
+
   // ── Final Price ──
-  const rawMultiplier = capacityMultiplier * timeMultiplier * velocityMultiplier
+  const rawMultiplier = coldStart
+    ? 1.0
+    : capacityMultiplier * timeMultiplier * velocityMultiplier
   // Cap the multiplier: max 2x, min 0.7x
   const finalMultiplier = Math.min(2.0, Math.max(0.7, rawMultiplier))
   const suggestedPrice = Math.round(basePrice * finalMultiplier)
@@ -73,7 +82,8 @@ export const calculateDynamicPrice = (event, tickets = []) => {
 
   // ── Price tier suggestion ──
   let priceTier = 'normal'
-  if (finalMultiplier >= 1.4) priceTier = 'premium'
+  if (coldStart) priceTier = 'new'
+  else if (finalMultiplier >= 1.4) priceTier = 'premium'
   else if (finalMultiplier >= 1.15) priceTier = 'high-demand'
   else if (finalMultiplier <= 0.85) priceTier = 'early-bird'
 
@@ -101,6 +111,7 @@ export const calculateDynamicPrice = (event, tickets = []) => {
 }
 
 function getRecommendation(tier, sellOutProb, days, capPct) {
+  if (tier === 'new') return `Evento recién publicado con ${days} días por delante. Aún no hay suficientes datos de venta: mantén el precio y espera las primeras señales de demanda.`
   if (tier === 'premium') return 'Alta demanda detectada. Considera aumentar el precio — el evento se está agotando rápido.'
   if (tier === 'high-demand') return 'Demanda por encima del promedio. Buen momento para activar la siguiente fase de precios.'
   if (tier === 'early-bird') return 'Las ventas están lentas. Considera una promoción o descuento para impulsar las primeras compras.'
@@ -129,17 +140,19 @@ export const forecastDemand = (event, tickets = []) => {
   const days = Object.keys(dailySales).sort()
   const values = days.map(d => dailySales[d])
 
-  // Simple moving average for trend
+  // Simple moving average for trend. Guard against no sales (0/0 → NaN):
+  // if there are no data points yet, the trend is simply 0.
   const windowSize = Math.min(3, values.length)
-  const trend = values.length >= windowSize
+  const trend = values.length > 0 && windowSize > 0
     ? values.slice(-windowSize).reduce((s, v) => s + v, 0) / windowSize
-    : values.length > 0 ? values.reduce((s, v) => s + v, 0) / values.length : 0
+    : 0
 
   // Project forward
+  const cap = capacity || 1 // never divide by zero
   const daysUntilEvent = Math.max(1, Math.ceil((eventDate - now) / (1000 * 60 * 60 * 24)))
   const projectedAdditionalSales = Math.round(trend * daysUntilEvent)
-  const projectedTotal = Math.min(capacity, tickets.length + projectedAdditionalSales)
-  const projectedPct = Math.round((projectedTotal / capacity) * 100)
+  const projectedTotal = Math.min(cap, tickets.length + projectedAdditionalSales)
+  const projectedPct = Math.round((projectedTotal / cap) * 100)
 
   // Confidence based on data points
   const confidence = Math.min(90, Math.max(20, values.length * 10))
@@ -150,12 +163,12 @@ export const forecastDemand = (event, tickets = []) => {
   for (let i = 1; i <= Math.min(daysUntilEvent, 30); i++) {
     // Add some variation to trend
     const variation = trend * (0.8 + Math.random() * 0.4)
-    cumulative = Math.min(capacity, cumulative + variation)
+    cumulative = Math.min(cap, cumulative + variation)
     const date = new Date(now.getTime() + i * 24 * 60 * 60 * 1000)
     forecast.push({
       date: date.toISOString().split('T')[0],
       projected: Math.round(cumulative),
-      pct: Math.round((cumulative / capacity) * 100),
+      pct: Math.round((cumulative / cap) * 100),
     })
   }
 
@@ -167,9 +180,9 @@ export const forecastDemand = (event, tickets = []) => {
     daysUntilEvent,
     confidence,
     forecast,
-    willSellOut: projectedTotal >= capacity * 0.95,
+    willSellOut: projectedTotal >= cap * 0.95,
     estimatedSellOutDate: trend > 0
-      ? new Date(now.getTime() + ((capacity - tickets.length) / trend) * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+      ? new Date(now.getTime() + ((cap - tickets.length) / trend) * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
       : null,
   }
 }

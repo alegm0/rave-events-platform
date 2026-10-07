@@ -13,15 +13,59 @@ const PREF_TO_SERVICE = {
   quieterAreas: { serviceTypes: [], zoneTypes: ['quiet'], reason: 'Zonas tranquilas' },
 }
 
-export const SERVICE_META = {
-  entrance: { label: 'Entrada', icon: 'entrance' },
-  water: { label: 'Agua', icon: 'water' },
-  toilet: { label: 'Baños', icon: 'toilet' },
-  firstaid: { label: 'First Aid', icon: 'firstaid' },
-  rest: { label: 'Descanso', icon: 'rest' },
-  smoking: { label: 'Smoking', icon: 'smoking' },
-  exit: { label: 'Salida', icon: 'exit' },
+// Universal emoji per service type — instantly recognizable, no legend needed.
+// Used by the venue map, the editor checklist and the plan.
+export const SERVICE_EMOJI = {
+  entrance: '🚪',
+  bar: '🍸',
+  water: '💧',
+  toilet: '🚻',
+  firstaid: '🏥',
+  rest: '🪑',
+  smoking: '🚬',
+  exit: '🚨',
 }
+export const ZONE_EMOJI = {
+  booth: '🎧',
+  floor: '💃',
+  stage: '🎧',
+  quiet: '🌙',
+}
+
+// Human-readable name per zone type (used in detail panels / plan).
+export const ZONE_TYPE_LABEL = {
+  booth: 'DJ Booth',
+  floor: 'Pista',
+  stage: 'Escenario',
+  quiet: 'Zona tranquila',
+}
+
+export const SERVICE_META = {
+  entrance: { label: 'Entrada', icon: 'entrance', emoji: '🚪' },
+  bar: { label: 'Bar', icon: 'bar', emoji: '🍸' },
+  water: { label: 'Agua', icon: 'water', emoji: '💧' },
+  toilet: { label: 'Baños', icon: 'toilet', emoji: '🚻' },
+  firstaid: { label: 'First Aid', icon: 'firstaid', emoji: '🏥' },
+  rest: { label: 'Zona de respiro', icon: 'rest', emoji: '🪑' },
+  smoking: { label: 'Fumadores', icon: 'smoking', emoji: '🚬' },
+  exit: { label: 'Salida', icon: 'exit', emoji: '🚨' },
+}
+
+// Simple venue builder: the organizer just TICKS which services the venue has
+// and we auto-place everything on the plan (no dragging). Each option carries a
+// fixed position, a plain-language description and a sensible default. This is
+// what makes the map easy — the organizer answers "what does my venue have?"
+// instead of designing a floor plan.
+export const VENUE_SERVICE_CATALOG = [
+  { type: 'entrance', emoji: '🚪', label: 'Entrada', desc: 'Puerta principal de acceso', x: 50, y: 95, walkMin: 0, accessible: true, essential: true, defaultOn: true },
+  { type: 'exit', emoji: '🚨', label: 'Salida de emergencia', desc: 'Salida rápida en caso de emergencia', x: 72, y: 95, walkMin: 3, essential: true, defaultOn: true },
+  { type: 'bar', emoji: '🍸', label: 'Bar', desc: 'Barra de bebidas (agua gratis disponible)', x: 90, y: 52, walkMin: 2, defaultOn: true },
+  { type: 'water', emoji: '💧', label: 'Punto de agua', desc: 'Estación de agua gratis', x: 72, y: 52, walkMin: 2, defaultOn: true },
+  { type: 'toilet', emoji: '🚻', label: 'Baños', desc: 'Baños del venue', x: 90, y: 78, walkMin: 3, accessible: false, defaultOn: true },
+  { type: 'smoking', emoji: '🚬', label: 'Zona de fumadores', desc: 'Área al aire libre para fumar (suele ser más tranquila)', x: 26, y: 74, walkMin: 3, defaultOn: false },
+  { type: 'rest', emoji: '🪑', label: 'Zona de respiro', desc: 'Un lugar para tomar un respiro y recuperar energía', x: 46, y: 90, walkMin: 3, accessible: true, defaultOn: false },
+  { type: 'firstaid', emoji: '🏥', label: 'Primeros auxilios', desc: 'Punto de atención médica', x: 20, y: 35, walkMin: 4, defaultOn: false },
+]
 
 /**
  * Given a comfort profile, return the set of service ids and zone ids
@@ -78,9 +122,13 @@ export const buildVenuePlan = (venue, comfortProfile = {}) => {
     : find('entrance')
   if (entrance) plan.push({ ...entrance, note: entrance.accessible ? 'Entrada sin escalones' : null })
 
-  // Main stage as the anchor
-  const mainStage = (venue.zones || []).find((z) => z.type === 'stage')
-  if (mainStage) plan.push({ id: mainStage.id, type: 'stage', label: mainStage.label, walkMin: 2, isZone: true })
+  // Main crowd/dance area as the anchor (fall back to booth/stage).
+  const zones = venue.zones || []
+  const mainStage =
+    zones.find((z) => z.type === 'floor') ||
+    zones.find((z) => z.type === 'booth') ||
+    zones.find((z) => z.type === 'stage')
+  if (mainStage) plan.push({ id: mainStage.id, type: mainStage.type, label: mainStage.label, walkMin: 2, isZone: true })
 
   const toilet = comfortProfile.accessibleToilets
     ? find('toilet', { accessible: true }) || find('toilet')

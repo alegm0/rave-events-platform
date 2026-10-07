@@ -32,3 +32,24 @@
   background: var(--gradient-primary);
   transition: width 0.5s ease;
 }
+
+/* ── Analytics responsive ── */
+.ea-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+@media (max-width: 768px) {
+  /* Action buttons wrap and go full-width-ish instead of overflowing */
+  .ea-actions { width: 100%; }
+  .ea-actions > * { flex: 1 1 auto; }
+
+  /* Attendees table: email takes too much room on phones — hide it and let
+     name / status / date share the row. Columns are set inline, so override. */
+  .ea-attendees .dash-event-row {
+    grid-template-columns: 1.4fr auto auto !important;
+    gap: 0.5rem; padding: 0.75rem 0.9rem;
+  }
+  .ea-attendees .dash-event-row > :nth-child(2) { display: none; } /* email */
+}
+
+@media (max-width: 480px) {
+  .ea-attendees .dash-event-row { font-size: 0.75rem; }
+}

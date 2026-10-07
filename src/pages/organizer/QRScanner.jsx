@@ -148,6 +148,35 @@ const QRScanner = () => {
     handleValidate(manualCode)
   }
 
+  // A finished event can't be scanned anymore — the door is closed. Block it
+  // here (not just by hiding the button) so a direct URL can't reopen check-in.
+  const eventEnded = (() => {
+    if (!event?.date) return false
+    const [h, m] = (event.time || '23:00').split(':').map((n) => parseInt(n, 10) || 0)
+    const start = new Date(`${event.date}T00:00:00`)
+    start.setHours(h, m, 0, 0)
+    const end = new Date(start.getTime() + (event.duration || 6) * 3600000)
+    return end < new Date()
+  })()
+
+  if (event && eventEnded) {
+    return (
+      <div className="scanner-page">
+        <div className="container" style={{ padding: '4rem 1rem', textAlign: 'center' }}>
+          <FiXCircle size={48} style={{ color: '#ff9800' }} />
+          <h1 style={{ color: '#fff', marginTop: '1rem' }}>Evento finalizado</h1>
+          <p style={{ color: 'rgba(255,255,255,0.5)', marginTop: '0.5rem' }}>
+            Este evento ya terminó, así que la validación de entradas está cerrada.
+          </p>
+          <div style={{ marginTop: '1.5rem', display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+            <Button variant="ghost" onClick={() => navigate(`/organizer/event/${eventId}/analytics`)}>Ver analytics</Button>
+            <Button onClick={() => navigate('/organizer/dashboard')}>Volver al dashboard</Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   if (denied) {
     return (
       <div className="scanner-page">

@@ -562,78 +562,91 @@ export const processSubscriptionReminders = async (userId) => {
 // Layouts are designed like a real seating-map: zones tile the plan (no floating
 // gaps), services sit on the borders/corridors so pins never cover labels.
 // Coords are 0-100 (%). Zone rects fill the 6..94 usable area.
+// Venue templates as simplified real floor plans. Zone types carry meaning:
+//   booth = small DJ structure (anchor), floor = large crowd/dance area,
+//   quiet = chill/sensory region. Smoking is a SERVICE and is kept separate
+//   from the quiet zone (someone may need quiet away from smoke). Each template
+//   has a visibly DIFFERENT spatial structure — not the same boxes relabeled.
 export const VENUE_TEMPLATES = {
-  warehouse: {
-    layout: 'indoor',
-    setting: 'Warehouse · 2 escenarios',
-    zones: [
-      // Main stage spans the top; two rooms tile the lower half.
-      { id: 'main', label: 'Main Stage', type: 'stage', x: 6, y: 8, w: 88, h: 34 },
-      { id: 'second', label: 'Concrete Room', type: 'stage', x: 52, y: 46, w: 42, h: 34 },
-      { id: 'chill', label: 'Chill / Quiet Zone', type: 'quiet', x: 6, y: 46, w: 42, h: 34 },
-    ],
-    // Positions aligned to the drawn warehouse floor plan (see floorplans/warehouse.jsx)
-    services: [
-      { id: 'gate', type: 'entrance', label: 'Gate B (entrada sin escalones)', x: 38, y: 90, accessible: true, walkMin: 0 },
-      { id: 'water1', type: 'water', label: 'Estación de agua', x: 62, y: 30, walkMin: 2 },
-      { id: 'toilet1', type: 'toilet', label: 'Baños', x: 18, y: 88, walkMin: 3 },
-      { id: 'toilet-acc', type: 'toilet', label: 'Baño accesible', x: 84, y: 88, accessible: true, walkMin: 3 },
-      { id: 'firstaid', type: 'firstaid', label: 'First Aid', x: 26, y: 30, walkMin: 4 },
-      { id: 'rest', type: 'rest', label: 'Zona de descanso', x: 71, y: 68, accessible: true, walkMin: 4 },
-      { id: 'smoking', type: 'smoking', label: 'Smoking Area', x: 90, y: 30, walkMin: 3 },
-      { id: 'exit', type: 'exit', label: 'Salida norte', x: 64, y: 90, walkMin: 3 },
-    ],
-    knowBeforeYouGo: ['Trae documento de identidad', 'No hay guardarropa', 'Transporte cercano: estación Fortitude Valley'],
-  },
   club: {
     layout: 'indoor',
-    setting: 'Club subterráneo · 1 escenario',
+    setting: 'Club · pista principal + chill',
     zones: [
-      { id: 'main', label: 'Dancefloor', type: 'stage', x: 6, y: 8, w: 88, h: 46 },
-      { id: 'bar', label: 'Bar / Lounge', type: 'quiet', x: 6, y: 58, w: 88, h: 22 },
+      // Small DJ booth up top, big dancefloor below it, chill off to the side.
+      { id: 'booth', label: 'DJ Booth', type: 'booth', x: 34, y: 5, w: 32, h: 9 },
+      { id: 'floor', label: 'Dance Floor', type: 'floor', x: 16, y: 17, w: 68, h: 42 },
+      { id: 'chill', label: 'Chill-out', type: 'quiet', x: 6, y: 64, w: 30, h: 24 },
     ],
     services: [
-      { id: 'gate', type: 'entrance', label: 'Entrada (con escaleras)', x: 28, y: 90, accessible: false, walkMin: 0 },
-      { id: 'water1', type: 'water', label: 'Estación de agua', x: 18, y: 56, walkMin: 1 },
-      { id: 'toilet1', type: 'toilet', label: 'Baños', x: 82, y: 56, walkMin: 2 },
-      { id: 'rest', type: 'rest', label: 'Lounge para sentarse', x: 50, y: 68, accessible: true, walkMin: 2 },
-      { id: 'exit', type: 'exit', label: 'Salida', x: 72, y: 90, walkMin: 2 },
+      { id: 'bar', type: 'bar', label: 'Bar (agua gratis)', x: 90, y: 36, walkMin: 2 },
+      { id: 'water1', type: 'water', label: 'Punto de agua', x: 90, y: 50, walkMin: 2 },
+      { id: 'toilet1', type: 'toilet', label: 'Baños', x: 90, y: 66, accessible: true, walkMin: 2 },
+      { id: 'smoking', type: 'smoking', label: 'Zona de fumadores', x: 46, y: 74, walkMin: 2 },
+      { id: 'rest', type: 'rest', label: 'Zona de respiro', x: 46, y: 90, accessible: true, walkMin: 2 },
+      { id: 'gate', type: 'entrance', label: 'Entrada', x: 50, y: 97, accessible: true, walkMin: 0 },
+      { id: 'exit', type: 'exit', label: 'Salida de emergencia', x: 90, y: 97, walkMin: 2 },
     ],
-    knowBeforeYouGo: ['Trae documento de identidad', 'La entrada tiene escaleras (sin acceso sin escalones)', 'Aforo reducido'],
+    knowBeforeYouGo: ['Trae documento de identidad', 'Agua potable gratis en el bar', 'Guardarropa en la entrada'],
+  },
+  warehouse: {
+    layout: 'indoor',
+    setting: 'Warehouse · main floor + room 2',
+    zones: [
+      // Main booth + big main floor on the left; a smaller Room 2 on the right.
+      { id: 'booth', label: 'Main Booth', type: 'booth', x: 20, y: 5, w: 30, h: 8 },
+      { id: 'floor', label: 'Main Floor', type: 'floor', x: 6, y: 16, w: 56, h: 46 },
+      { id: 'room2', label: 'Room 2', type: 'floor', x: 66, y: 16, w: 28, h: 46 },
+      { id: 'chill', label: 'Outdoor / Chill', type: 'quiet', x: 6, y: 66, w: 34, h: 22 },
+    ],
+    services: [
+      { id: 'bar', type: 'bar', label: 'Bar', x: 50, y: 72, walkMin: 3 },
+      { id: 'water1', type: 'water', label: 'Agua', x: 50, y: 84, walkMin: 3 },
+      { id: 'toilet1', type: 'toilet', label: 'Baños', x: 72, y: 74, accessible: true, walkMin: 3 },
+      { id: 'firstaid', type: 'firstaid', label: 'First Aid', x: 90, y: 72, walkMin: 4 },
+      { id: 'smoking', type: 'smoking', label: 'Zona de fumadores', x: 88, y: 86, walkMin: 3 },
+      { id: 'gate', type: 'entrance', label: 'Entrada', x: 30, y: 97, accessible: true, walkMin: 0 },
+      { id: 'exit', type: 'exit', label: 'Salida de emergencia', x: 70, y: 97, walkMin: 3 },
+    ],
+    knowBeforeYouGo: ['Trae documento de identidad', 'No hay guardarropa', 'Transporte: estación Fortitude Valley'],
   },
   festival: {
     layout: 'outdoor',
-    setting: 'Aire libre · 3 escenarios',
+    setting: 'Aire libre · varios escenarios',
     zones: [
-      { id: 'main', label: 'Main Stage', type: 'stage', x: 6, y: 8, w: 88, h: 26 },
-      { id: 'stage2', label: 'Sunset Stage', type: 'stage', x: 6, y: 38, w: 42, h: 26 },
-      { id: 'stage3', label: 'Forest Stage', type: 'stage', x: 52, y: 38, w: 42, h: 26 },
-      { id: 'chill', label: 'Quiet / Sensory Zone', type: 'quiet', x: 6, y: 68, w: 88, h: 16 },
+      // Open-air: main stage top-center, two stages distributed, lots of space.
+      { id: 'main', label: 'Main Stage', type: 'booth', x: 32, y: 4, w: 36, h: 10 },
+      { id: 'floor-main', label: 'Main Crowd', type: 'floor', x: 24, y: 16, w: 52, h: 24 },
+      { id: 'stage2', label: 'Sunset Stage', type: 'booth', x: 6, y: 46, w: 24, h: 8 },
+      { id: 'stage3', label: 'Forest Stage', type: 'booth', x: 70, y: 46, w: 24, h: 8 },
+      { id: 'chill', label: 'Quiet / Sensory', type: 'quiet', x: 38, y: 60, w: 24, h: 16 },
     ],
     services: [
-      { id: 'gate', type: 'entrance', label: 'Entrada principal (sin escalones)', x: 30, y: 92, accessible: true, walkMin: 0 },
-      { id: 'water1', type: 'water', label: 'Agua (centro)', x: 50, y: 36, walkMin: 5 },
-      { id: 'water2', type: 'water', label: 'Agua (este)', x: 90, y: 36, walkMin: 6 },
-      { id: 'toilet-acc', type: 'toilet', label: 'Baños accesibles', x: 10, y: 66, accessible: true, walkMin: 5 },
-      { id: 'firstaid', type: 'firstaid', label: 'First Aid', x: 90, y: 66, walkMin: 4 },
-      { id: 'rest', type: 'rest', label: 'Zona de descanso', x: 50, y: 86, accessible: true, walkMin: 6 },
-      { id: 'exit', type: 'exit', label: 'Salida de emergencia', x: 70, y: 92, walkMin: 5 },
+      { id: 'water1', type: 'water', label: 'Agua (oeste)', x: 10, y: 62, walkMin: 5 },
+      { id: 'water2', type: 'water', label: 'Agua (este)', x: 90, y: 62, walkMin: 6 },
+      { id: 'bar', type: 'bar', label: 'Bar central', x: 50, y: 50, walkMin: 4 },
+      { id: 'toilet-acc', type: 'toilet', label: 'Baños accesibles', x: 14, y: 80, accessible: true, walkMin: 5 },
+      { id: 'firstaid', type: 'firstaid', label: 'First Aid', x: 86, y: 80, walkMin: 4 },
+      { id: 'smoking', type: 'smoking', label: 'Zona de fumadores', x: 66, y: 72, walkMin: 5 },
+      { id: 'gate', type: 'entrance', label: 'Entrada principal', x: 30, y: 95, accessible: true, walkMin: 0 },
+      { id: 'exit', type: 'exit', label: 'Salida de emergencia', x: 70, y: 95, walkMin: 5 },
     ],
     knowBeforeYouGo: ['Trae documento de identidad', 'Evento al aire libre: revisa el clima', 'Parqueadero accesible en puerta sur'],
   },
   gallery: {
     layout: 'indoor',
-    setting: 'Galería de arte · 1 escenario',
+    setting: 'Espacio íntimo · galería / estudio',
     zones: [
-      { id: 'main', label: 'Sala Principal', type: 'stage', x: 6, y: 8, w: 88, h: 44 },
-      { id: 'chill', label: 'Sala tranquila', type: 'quiet', x: 6, y: 56, w: 88, h: 24 },
+      // Small performance area + compact crowd + lounge to the side.
+      { id: 'booth', label: 'Performance', type: 'booth', x: 30, y: 6, w: 40, h: 12 },
+      { id: 'floor', label: 'Crowd', type: 'floor', x: 18, y: 22, w: 64, h: 30 },
+      { id: 'chill', label: 'Lounge / Seating', type: 'quiet', x: 6, y: 58, w: 44, h: 26 },
     ],
     services: [
-      { id: 'gate', type: 'entrance', label: 'Entrada (sin escalones)', x: 28, y: 90, accessible: true, walkMin: 0 },
-      { id: 'water1', type: 'water', label: 'Estación de agua', x: 20, y: 54, walkMin: 1 },
-      { id: 'toilet-acc', type: 'toilet', label: 'Baño accesible', x: 82, y: 54, accessible: true, walkMin: 2 },
-      { id: 'rest', type: 'rest', label: 'Bancas para descansar', x: 50, y: 68, accessible: true, walkMin: 2 },
-      { id: 'exit', type: 'exit', label: 'Salida', x: 72, y: 90, walkMin: 2 },
+      { id: 'bar', type: 'bar', label: 'Bar', x: 86, y: 62, walkMin: 2 },
+      { id: 'water1', type: 'water', label: 'Agua', x: 86, y: 76, walkMin: 2 },
+      { id: 'toilet-acc', type: 'toilet', label: 'Baño accesible', x: 64, y: 78, accessible: true, walkMin: 2 },
+      { id: 'gate', type: 'entrance', label: 'Entrada', x: 30, y: 96, accessible: true, walkMin: 0 },
+      { id: 'exit', type: 'exit', label: 'Salida', x: 70, y: 96, walkMin: 2 },
     ],
     knowBeforeYouGo: ['Trae documento de identidad', 'Espacio íntimo, aforo limitado', 'Transporte cercano disponible'],
   },
@@ -643,30 +656,56 @@ export const VENUE_TEMPLATES = {
 const pickVenueTemplate = (event) => {
   const g = (event.genre || '').toLowerCase()
   const loc = (event.location || '').toLowerCase()
-  if ((event.capacity || 0) >= 1000 || loc.includes('parque') || loc.includes('festival')) return VENUE_TEMPLATES.festival
-  if (loc.includes('galer') || g.includes('minimal')) return VENUE_TEMPLATES.gallery
+  if ((event.capacity || 0) >= 1000 || loc.includes('parque') || loc.includes('festival') || loc.includes('riverstage') || loc.includes('open air')) return VENUE_TEMPLATES.festival
+  if (loc.includes('galer') || loc.includes('gallery') || g.includes('minimal')) return VENUE_TEMPLATES.gallery
   if (loc.includes('club') || loc.includes('subterr') || g.includes('house')) return VENUE_TEMPLATES.club
   return VENUE_TEMPLATES.warehouse
 }
 
 // Bump this whenever the venue layouts change, so existing events get refreshed.
-export const VENUE_LAYOUT_VERSION = 4
+export const VENUE_LAYOUT_VERSION = 5
+
+// Upgrade a legacy authored venue IN PLACE without discarding the organizer's
+// choices. The old editor produced one big `stage` dancefloor and no DJ booth.
+// For techno the booth is essential wayfinding, so we split that single zone
+// into a small booth anchored at its top + a large dance floor below it.
+// Services, accessibility flags and quiet zones are preserved untouched.
+const upgradeLegacyVenue = (venue) => {
+  if (!venue || !Array.isArray(venue.zones)) return venue
+  const alreadyNew = venue.zones.some((z) => z.type === 'booth' || z.type === 'floor')
+  if (alreadyNew) return venue
+
+  const zones = venue.zones.flatMap((z) => {
+    if (z.type !== 'stage') return [z]
+    // Carve a small booth off the top of the old dancefloor, keep the rest as floor.
+    const boothH = Math.min(10, Math.max(7, (z.h || 40) * 0.22))
+    const boothW = Math.min(z.w, Math.max(26, (z.w || 80) * 0.42))
+    const boothX = z.x + ((z.w || 80) - boothW) / 2
+    const booth = { id: `${z.id}-booth`, label: 'DJ Booth', type: 'booth', x: Math.round(boothX), y: z.y, w: Math.round(boothW), h: Math.round(boothH) }
+    const floor = { ...z, type: 'floor', label: /dance|pista|floor|crowd/i.test(z.label || '') ? z.label : 'Dance Floor', y: Math.round(z.y + boothH + 2), h: Math.round(Math.max(16, (z.h || 40) - boothH - 2)) }
+    return [booth, floor]
+  })
+  return { ...venue, zones }
+}
 
 // Backfill / refresh venues. Runs on every load: applies a venue to events that
-// lack one, and re-applies the template when the stored layout version is old.
-// Venues authored by an organizer (`venueAuthored`) are never touched — their
-// zones, services and accessibility flags are declarations by a real person and
-// must not be overwritten by a guessed template.
+// lack one, re-applies the template when the stored layout version is old, and
+// upgrades authored venues missing the new booth/floor structure (in place, so
+// the organizer's declared services and accessibility are never lost).
 export const backfillVenues = async () => {
   const events = await getCollection('events')
-  const stale = events.filter(e => !e.venueAuthored && (!e.venue || (e.venueVersion || 1) < VENUE_LAYOUT_VERSION))
+  const stale = events.filter(e => (!e.venue && !e.venueAuthored) || (e.venueVersion || 1) < VENUE_LAYOUT_VERSION)
   if (stale.length === 0) return 0
   const batch = writeBatch(db)
   stale.forEach(e => {
-    batch.update(doc(db, 'events', e.id), {
-      venue: e.venue ? matchTemplateToVenue(e.venue) : pickVenueTemplate(e),
-      venueVersion: VENUE_LAYOUT_VERSION,
-    })
+    let venue
+    if (e.venueAuthored && e.venue) {
+      // Keep the organizer's venue, only upgrade its zone structure.
+      venue = upgradeLegacyVenue(e.venue)
+    } else {
+      venue = e.venue ? matchTemplateToVenue(e.venue) : pickVenueTemplate(e)
+    }
+    batch.update(doc(db, 'events', e.id), { venue, venueVersion: VENUE_LAYOUT_VERSION })
   })
   await batch.commit()
   invalidateCache('events')

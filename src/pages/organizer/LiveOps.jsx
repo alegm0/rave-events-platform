@@ -122,13 +122,18 @@ const LiveOps = () => {
   const startsAt = event.date && event.time ? new Date(`${event.date}T${event.time}`) : null
   const endsAt = startsAt ? new Date(startsAt.getTime() + (event.duration || 6) * 3600000) : null
   const now = new Date()
+  // The live door panel only makes sense around the event: from a few hours
+  // before doors until it ends. Far-off events are "scheduled" (not operable).
+  const DOORS_WINDOW_MS = 6 * 3600000 // panel opens 6h before start
   const phase = !startsAt ? 'unknown'
-    : now < startsAt ? 'before'
     : endsAt && now > endsAt ? 'after'
-    : 'live'
+    : now >= startsAt ? 'live'
+    : (startsAt - now) <= DOORS_WINDOW_MS ? 'before'
+    : 'scheduled'
 
   const secondsAgo = lastSync ? Math.floor((Date.now() - lastSync) / 1000) : null
   const oversold = capacity > 0 && sold > capacity
+  const hoursToDoors = startsAt ? Math.ceil((startsAt - now) / 3600000) : null
 
   return (
     <div className="lo-page">
@@ -139,7 +144,11 @@ const LiveOps = () => {
             <Link to="/organizer/my-events" className="lo-back"><FiArrowLeft /> Mis eventos</Link>
             <span className={`lo-phase lo-phase--${phase}`}>
               {phase === 'live' && <span className="lo-dot" />}
-              {phase === 'live' ? 'En curso' : phase === 'before' ? 'Antes de abrir' : phase === 'after' ? 'Finalizado' : 'Sin horario'}
+              {phase === 'live' ? 'En curso'
+                : phase === 'before' ? 'Antes de abrir'
+                : phase === 'after' ? 'Finalizado'
+                : phase === 'scheduled' ? 'Programado'
+                : 'Sin horario'}
             </span>
             <h1 className="lo-title"><FiActivity /> Operación en vivo</h1>
             <p className="lo-event">{event.title} · {event.location}</p>
@@ -153,13 +162,35 @@ const LiveOps = () => {
           </div>
         </div>
 
-        <p className="lo-sync">
-          {secondsAgo === null ? 'Sin datos' :
-            secondsAgo < 5 ? 'Actualizado ahora' : `Actualizado hace ${secondsAgo}s`}
-          {auto && ` · se refresca cada ${POLL_MS / 1000}s`}
-        </p>
+        {phase !== 'scheduled' && (
+          <p className="lo-sync">
+            {secondsAgo === null ? 'Sin datos' :
+              secondsAgo < 5 ? 'Actualizado ahora' : `Actualizado hace ${secondsAgo}s`}
+            {auto && ` · se refresca cada ${POLL_MS / 1000}s`}
+          </p>
+        )}
 
-        {oversold && (
+        {/* Far-off event: the live door panel isn't operable yet. Show when it
+            will activate instead of an empty "0 inside" dashboard. */}
+        {phase === 'scheduled' && (
+          <div className="lo-scheduled">
+            <FiClock />
+            <h2>El panel en vivo se activa el día del evento</h2>
+            <p>
+              {event.title} es {startsAt.toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long' })} a las {event.time}
+              {hoursToDoors > 48 ? ` · faltan ${Math.ceil(hoursToDoors / 24)} días` : ` · faltan ~${hoursToDoors}h`}.
+            </p>
+            <p className="lo-scheduled-sub">
+              Mientras tanto puedes revisar las ventas en Analytics. El check-in en puerta abre 6 horas antes del evento.
+            </p>
+            <div className="lo-scheduled-actions">
+              <Link to={`/organizer/event/${id}/analytics`}><Button variant="ghost">Ver analytics</Button></Link>
+              <Link to="/organizer/my-events"><Button>Mis eventos</Button></Link>
+            </div>
+          </div>
+        )}
+
+        {phase !== 'scheduled' && oversold && (
           <div className="lo-alert">
             <FiAlertTriangle />
             <span>
@@ -168,6 +199,7 @@ const LiveOps = () => {
           </div>
         )}
 
+        {phase !== 'scheduled' && (<>
         {/* KPIs */}
         <div className="lo-stats">
           {[
@@ -199,7 +231,7 @@ const LiveOps = () => {
           <div className="lo-bar-legend">
             <span><i className="lo-key lo-key--inside" /> Dentro ({occupancy}%)</span>
             <span><i className="lo-key lo-key--sold" /> Vendido ({soldPct}%)</span>
-            <span className="lo-bar-rev">Ingresos: ${revenue.toLocaleString()}</span>
+            <span className="lo-bar-rev">Ingresos: AUD ${revenue.toLocaleString()}</span>
           </div>
         </div>
 
@@ -230,6 +262,7 @@ const LiveOps = () => {
             </div>
           )}
         </div>
+        </>)}
       </div>
     </div>
   )

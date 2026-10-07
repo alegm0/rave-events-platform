@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { getEventsByOrganizer, getTicketsByEvent, sumRevenue } from '../../lib/db'
 import { useAuth } from '../../context/AuthContext'
-import { FiPlus, FiMapPin, FiCalendar, FiUsers, FiBarChart2, FiCrosshair, FiClock, FiEdit, FiActivity } from 'react-icons/fi'
+import { FiPlus, FiMapPin, FiCalendar, FiUsers, FiBarChart2, FiCrosshair, FiClock, FiEdit, FiActivity, FiEye } from 'react-icons/fi'
 import Button from '../../components/ui/Button'
 import './Dashboard.css'
 
@@ -86,7 +86,7 @@ const MyEvents = () => {
                         <span className="me-mini-label">tickets</span>
                       </div>
                       <div className="me-mini-stat">
-                        <span className="me-mini-val">{'$' + e.revenue}</span>
+                        <span className="me-mini-val">{'AUD $' + (e.revenue || 0).toLocaleString()}</span>
                         <span className="me-mini-label">ingresos</span>
                       </div>
                       <div className="me-mini-stat">
@@ -99,6 +99,8 @@ const MyEvents = () => {
                     </div>
                     <div className="me-card-actions">
                       <Link to={`/organizer/event/${e.id}/analytics`}><Button variant="ghost" size="sm" icon={<FiBarChart2 />}>Analytics</Button></Link>
+                      {/* Open the public (raver-facing) event page in a new tab */}
+                      <Link to={`/event/${e.id}`} target="_blank" rel="noopener noreferrer"><Button variant="ghost" size="sm" icon={<FiEye />}>Ver como raver</Button></Link>
                       {!isPast && <Link to={`/organizer/edit-event/${e.id}`}><Button variant="ghost" size="sm" icon={<FiEdit />}>Editar</Button></Link>}
                       {!isPast && <Link to={`/organizer/event/${e.id}/live`}><Button variant="ghost" size="sm" icon={<FiActivity />}>En vivo</Button></Link>}
                       {!isPast && <Link to={`/organizer/scanner/${e.id}`}><Button size="sm" icon={<FiCrosshair />}>Scanner</Button></Link>}

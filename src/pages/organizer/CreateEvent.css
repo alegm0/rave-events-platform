@@ -80,12 +80,17 @@
 
 /* Revenue preview */
 .ce-revenue-preview {
-  display: flex; justify-content: space-between; align-items: center;
+  display: flex; flex-direction: column; gap: 0.6rem;
   padding: 1.25rem; background: rgba(255,61,0,0.06); border: 1px solid rgba(255,61,0,0.15);
   margin-top: 1.5rem;
 }
+.ce-revenue-main { display: flex; justify-content: space-between; align-items: center; }
 .ce-revenue-preview span { color: rgba(255,255,255,0.5); font-size: 0.8rem; }
 .ce-revenue-preview strong { color: #fff; font-size: 1.3rem; font-weight: 800; }
+.ce-revenue-note {
+  color: #ffb74d; font-size: 0.72rem; line-height: 1.4;
+  padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.06);
+}
 
 /* Image grid */
 .ce-image-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; }
@@ -150,12 +155,23 @@
 
 @media (max-width: 768px) {
   .ce-page { padding: 5rem 0 3rem; }
-  .ce-progress { flex-wrap: wrap; }
-  .ce-prog-step { flex: none; width: 50%; }
+  /* Compact stepper: dots in a row, label only on the active step so you
+     always know where you are ("3 · Tickets") without clutter. */
+  .ce-progress { gap: 0; margin-bottom: 1.75rem; }
+  .ce-prog-step { flex: 1; padding: 0.6rem 0.3rem; justify-content: center; }
   .ce-prog-step span { display: none; }
+  .ce-prog-step.active { flex: 2.5; }
+  .ce-prog-step.active span { display: inline; font-size: 0.62rem; }
+  .ce-prog-dot { width: 24px; height: 24px; font-size: 0.65rem; }
   .ce-genre-grid { grid-template-columns: repeat(2, 1fr); }
   .ce-image-grid { grid-template-columns: repeat(2, 1fr); }
   .ce-row { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 480px) {
+  .ce-prog-step { padding: 0.5rem 0.2rem; }
+  .ce-prog-dot { width: 22px; height: 22px; }
+  .ce-prog-step.active span { font-size: 0.58rem; letter-spacing: 0.04em; }
 }
 
 

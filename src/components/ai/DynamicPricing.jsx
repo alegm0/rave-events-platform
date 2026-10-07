@@ -29,12 +29,12 @@ const DynamicPricing = ({ event, tickets }) => {
       <div className="ai-pricing-main">
         <div className="ai-pricing-current">
           <span className="ai-pricing-label">Precio actual</span>
-          <span className="ai-pricing-value">${pricing.basePrice}</span>
+          <span className="ai-pricing-value">AUD ${pricing.basePrice}</span>
         </div>
         <div className="ai-pricing-arrow">→</div>
         <div className={`ai-pricing-suggested ${priceDirection}`}>
           <span className="ai-pricing-label">Precio sugerido</span>
-          <span className="ai-pricing-value">${pricing.suggestedPrice}</span>
+          <span className="ai-pricing-value">AUD ${pricing.suggestedPrice}</span>
           {priceChange !== 0 && (
             <span className={`ai-pricing-change ${priceDirection}`}>
               {priceDirection === 'up' ? '+' : ''}{priceChange > 0 ? `$${priceChange}` : `-$${Math.abs(priceChange)}`}
@@ -45,6 +45,7 @@ const DynamicPricing = ({ event, tickets }) => {
 
       {/* Tier badge */}
       <div className={`ai-tier-badge ai-tier-${pricing.priceTier}`}>
+        {pricing.priceTier === 'new' && '🌱 Recién publicado — Sin datos aún'}
         {pricing.priceTier === 'premium' && '🔥 Premium — Alta demanda'}
         {pricing.priceTier === 'high-demand' && '📈 Demanda alta'}
         {pricing.priceTier === 'normal' && '✅ Precio normal'}

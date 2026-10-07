@@ -106,6 +106,7 @@ const run = async () => {
       const rid = genId()
       batch.set(db.collection('reviews').doc(rid), {
         id: rid, userId: r.id, eventId: ev.id,
+        userName: r.displayName || r.name || null,
         rating: rv.rating, text: rv.text,
         createdAt: new Date().toISOString(), seed: true,
       })

@@ -167,7 +167,20 @@ export const analyzeEventFraud = (tickets, allTickets) => {
     })
   }
 
-  const riskLevel = flaggedCount > 3 ? 'high' : flaggedCount > 0 ? 'medium' : 'low'
+  // Risk level must reflect BOTH flagged buyers and standalone alerts (like a
+  // traffic spike), otherwise the panel contradicts itself — "no anomalies"
+  // while an alert is shown. High-severity alerts raise the floor to medium.
+  const hasHighAlert = alerts.some(a => a.severity === 'high')
+  const totalAlerts = alerts.length
+  let riskLevel = 'low'
+  if (flaggedCount > 3 || hasHighAlert) riskLevel = 'high'
+  else if (flaggedCount > 0 || totalAlerts > 0) riskLevel = 'medium'
+
+  const summary = riskLevel === 'high'
+    ? `⚠️ ${flaggedCount > 0 ? `${flaggedCount} comprador(es) flaggeado(s). ` : ''}Se detectó actividad sospechosa.`
+    : riskLevel === 'medium'
+    ? `⚡ ${totalAlerts} alerta(s) para monitorear. Sin riesgo alto.`
+    : '✅ No se detectaron anomalías. Compras normales.'
 
   return {
     riskLevel,
@@ -179,10 +192,6 @@ export const analyzeEventFraud = (tickets, allTickets) => {
       maxTicketsOneUser: Math.max(...Object.values(userTickets).map(t => t.length)),
       maxBurstPerMinute: maxBurstCount,
     },
-    summary: riskLevel === 'high'
-      ? `⚠️ ${flaggedCount} compradores flaggeados. Se detectó actividad sospechosa.`
-      : riskLevel === 'medium'
-      ? `⚡ ${flaggedCount} alerta(s) menor(es). Monitorear.`
-      : '✅ No se detectaron anomalías. Compras normales.',
+    summary,
   }
 }

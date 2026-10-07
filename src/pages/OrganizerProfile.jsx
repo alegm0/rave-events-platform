@@ -34,8 +34,15 @@ const OrganizerProfile = () => {
   if (!org) return <div className="op-loading"><div className="loader"></div></div>
 
   const brand = org.brand || {}
-  const upcomingEvents = events.filter(e => new Date(e.date) >= new Date())
-  const pastEvents = events.filter(e => new Date(e.date) < new Date())
+  const now = new Date()
+  // Upcoming: soonest first. Past: most recent first. (Firestore order isn't
+  // chronological, so sort explicitly or the dates look scrambled.)
+  const upcomingEvents = events
+    .filter(e => new Date(e.date) >= now)
+    .sort((a, b) => new Date(a.date) - new Date(b.date))
+  const pastEvents = events
+    .filter(e => new Date(e.date) < now)
+    .sort((a, b) => new Date(b.date) - new Date(a.date))
 
   return (
     <div className="op-page">

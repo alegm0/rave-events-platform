@@ -10,6 +10,7 @@ import DynamicPricing from '../../components/ai/DynamicPricing'
 import SentimentPanel from '../../components/ai/SentimentPanel'
 import FraudDetection from '../../components/ai/FraudDetection'
 import './Dashboard.css'
+import './EventAnalytics.css'
 
 const EventAnalytics = () => {
   const { id } = useParams()
@@ -75,6 +76,16 @@ const EventAnalytics = () => {
 
   const pct = event.capacity ? Math.round((stats.total / event.capacity) * 100) : 0
 
+  // Has the event already finished? (start + duration in the past)
+  const eventEnded = (() => {
+    if (!event?.date) return false
+    const [h, m] = (event.time || '23:00').split(':').map((n) => parseInt(n, 10) || 0)
+    const start = new Date(`${event.date}T00:00:00`)
+    start.setHours(h, m, 0, 0)
+    const end = new Date(start.getTime() + (event.duration || 6) * 3600000)
+    return end < new Date()
+  })()
+
   return (
     <div className="dash-page">
       <div className="container">
@@ -83,10 +94,11 @@ const EventAnalytics = () => {
             <span className="dash-tag">Analytics</span>
             <h1 className="dash-title">{event.title}</h1>
           </div>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <Link to={`/organizer/edit-event/${id}`}><Button variant="ghost" icon={<FiEdit />}>Editar</Button></Link>
-            <Link to={`/organizer/event/${id}/live`}><Button variant="ghost" icon={<FiActivity />}>En vivo</Button></Link>
-            <Link to={`/organizer/scanner/${id}`}><Button icon={<FiCrosshair />}>Scanner</Button></Link>
+          <div className="ea-actions">
+            {/* Edit/live/scanner only make sense before the event is over */}
+            {!eventEnded && <Link to={`/organizer/edit-event/${id}`}><Button variant="ghost" icon={<FiEdit />}>Editar</Button></Link>}
+            {!eventEnded && <Link to={`/organizer/event/${id}/live`}><Button variant="ghost" icon={<FiActivity />}>En vivo</Button></Link>}
+            {!eventEnded && <Link to={`/organizer/scanner/${id}`}><Button icon={<FiCrosshair />}>Scanner</Button></Link>}
             <Button variant="ghost" onClick={() => setShowDelete(true)} icon={<FiTrash2 />} className="btn-danger-ghost">Eliminar</Button>
           </div>
         </div>
@@ -94,9 +106,9 @@ const EventAnalytics = () => {
         <div className="dash-stats">
           {[
             { icon: <FiUsers />, value: stats.total, label: 'Tickets vendidos', color: '#4caf50' },
-            { icon: <FiDollarSign />, value: `$${stats.revenue}`, label: 'Ingresos', color: '#ff9800' },
-            { icon: <FiCheckCircle />, value: stats.checkedIn, label: 'Check-in', color: '#2196f3' },
-            { icon: <FiClock />, value: stats.pending, label: 'Pendientes', color: '#ff3d00' },
+            { icon: <FiDollarSign />, value: `AUD $${(stats.revenue || 0).toLocaleString()}`, label: 'Ingresos', color: '#ff9800' },
+            { icon: <FiCheckCircle />, value: stats.checkedIn, label: eventEnded ? 'Asistieron' : 'Check-in', color: '#2196f3' },
+            { icon: <FiClock />, value: stats.pending, label: eventEnded ? 'No asistieron' : 'Tickets válidos', color: '#ff3d00' },
           ].map((s, i) => (
             <div key={i} className="dash-stat-card">
               <div className="dash-stat-top">
@@ -150,20 +162,22 @@ const EventAnalytics = () => {
         <div className="dash-section" style={{ marginTop: '2rem' }}>
           <h2 className="dash-section-title">Lista de asistentes ({attendees.length})</h2>
           {attendees.length > 0 ? (
-            <div className="dash-events">
-              <div className="dash-event-row" style={{ background: '#1a1a1a', fontWeight: 600, fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+            <div className="ea-attendees">
+              <div className="ea-att-row ea-att-head">
                 <span>Nombre</span><span>Email</span><span>Estado</span><span>Fecha compra</span>
               </div>
               {attendees.map(a => (
-                <div key={a.id} className="dash-event-row" style={{ gridTemplateColumns: '1fr 1fr auto auto' }}>
-                  <span style={{ color: '#fff', fontSize: '0.85rem' }}>{a.user?.displayName || 'Usuario'}</span>
-                  <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.8rem' }}>{a.user?.email || '—'}</span>
-                  <span style={{
-                    padding: '0.2rem 0.6rem', fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase',
-                    background: a.status === 'used' ? 'rgba(76,175,80,0.15)' : 'rgba(255,152,0,0.15)',
-                    color: a.status === 'used' ? '#4caf50' : '#ff9800'
-                  }}>{a.status === 'used' ? 'Check-in' : 'Pendiente'}</span>
-                  <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.75rem' }}>
+                <div key={a.id} className="ea-att-row">
+                  <span className="ea-att-name" data-label="Nombre">{a.user?.displayName || 'Usuario'}</span>
+                  <span className="ea-att-email" data-label="Email">{a.user?.email || '—'}</span>
+                  <span className="ea-att-status" data-label="Estado">
+                    {/* "Pendiente" only makes sense for a finished event (no-show).
+                        For an upcoming event an unused ticket is simply valid. */}
+                    <span className={`ea-att-badge ${a.status === 'used' ? 'is-in' : eventEnded ? 'is-pending' : 'is-valid'}`}>
+                      {a.status === 'used' ? 'Check-in' : eventEnded ? 'No asistió' : 'Válido'}
+                    </span>
+                  </span>
+                  <span className="ea-att-date" data-label="Fecha compra">
                     {new Date(a.purchaseDate).toLocaleDateString('es', { day: 'numeric', month: 'short' })}
                   </span>
                 </div>
@@ -173,8 +187,11 @@ const EventAnalytics = () => {
             <div className="dash-empty"><p>Aún no hay asistentes</p></div>
           )}
         </div>
-        {/* AI-Powered Analytics */}
-        <DynamicPricing event={event} tickets={tickets} />
+        {/* AI-Powered Analytics.
+            Pricing & demand forecast only make sense while tickets are still on
+            sale — hide them once the event is over. Sentiment (reviews) and
+            fraud (retrospective) stay relevant for past events. */}
+        {!eventEnded && <DynamicPricing event={event} tickets={tickets} />}
         <SentimentPanel reviews={reviews} />
         <FraudDetection tickets={tickets} allTickets={tickets} />
       </div>

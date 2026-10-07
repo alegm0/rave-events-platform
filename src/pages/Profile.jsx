@@ -22,6 +22,8 @@ const Profile = () => {
     const load = async () => {
       if (isOrg && currentUser) {
         const evts = await getEventsByOrganizer(currentUser.id)
+        // "Últimos eventos" = most recent first (Firestore order isn't by date).
+        evts.sort((a, b) => new Date(b.date) - new Date(a.date))
         setOrgEvents(evts)
         let tix = 0, rev = 0
         const counts = {}
@@ -66,7 +68,12 @@ const Profile = () => {
               {isOrg ? '🎛️ Organizador' : '🎧 Raver'}
             </span>
             <div className="prof-member">
-              Miembro desde {currentUser?.createdAt ? new Date(currentUser.createdAt).toLocaleDateString('es', { month: 'long', year: 'numeric' }) : 'N/A'}
+              {/* For organizers, align with the public page: show the brand's
+                  founding year ("Desde 2020") instead of the account creation
+                  date, so both views tell the same story. */}
+              {isOrg && userProfile?.brand?.founded
+                ? `Organizando desde ${userProfile.brand.founded}`
+                : `Miembro desde ${currentUser?.createdAt ? new Date(currentUser.createdAt).toLocaleDateString('es', { month: 'long', year: 'numeric' }) : 'N/A'}`}
             </div>
             <button className="prof-logout" onClick={logout}><FiLogOut /> Cerrar sesión</button>
           </div>

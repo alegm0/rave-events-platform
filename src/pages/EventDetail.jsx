@@ -120,7 +120,13 @@ const EventDetail = () => {
   const activeTier = tiers.find(t => t.active) || null
   const currentPrice = activeTier ? activeTier.price : event.price
   const allTiersSoldOut = tiered && !activeTier
-  const isOrg = userProfile?.role === 'organizer' && event.organizerId === currentUser?.id
+  // Role separation: organizers are brands/producers, not attendees. No
+  // organizer buys tickets or reviews events — those actions are for ravers.
+  const isOrganizer = userProfile?.role === 'organizer'
+  // Owner of THIS event: gets the "manage your event" badge instead.
+  const isEventOwner = isOrganizer && event.organizerId === currentUser?.id
+  // Keep `isOrg` meaning "should not act as an attendee here" = any organizer.
+  const isOrg = isOrganizer
   const endTime = (() => {
     if (!event.date || !event.time) return null
     const start = new Date(event.date + 'T' + event.time)
@@ -380,10 +386,14 @@ const EventDetail = () => {
           {/* Sidebar - Ticket purchase */}
           <div className="ed-sidebar">
             <div className="ed-ticket-box">
-              {isOrg && (
+              {isEventOwner ? (
                 <div className="ed-org-badge">
                   <span>🎛️ Eres el organizador</span>
                   <Link to={`/organizer/event/${id}/analytics`}>Ver Analytics →</Link>
+                </div>
+              ) : isOrganizer && (
+                <div className="ed-org-badge">
+                  <span>🎛️ Cuenta de organizador</span>
                 </div>
               )}
 
@@ -428,7 +438,12 @@ const EventDetail = () => {
                 </div>
               </div>
 
-              {purchased || alreadyOwned ? (
+              {isOrganizer ? (
+                /* Organizer accounts are producers, not attendees — no buying */
+                <Button fullWidth size="lg" disabled>
+                  {isEventOwner ? 'Es tu evento' : 'Solo los ravers compran tickets'}
+                </Button>
+              ) : purchased || alreadyOwned ? (
                 <div className="ed-purchased">
                   <FiCheck size={24} />
                   <div>
@@ -438,8 +453,8 @@ const EventDetail = () => {
                   <Link to="/my-tickets"><Button fullWidth variant="ghost">Ver mis tickets</Button></Link>
                 </div>
               ) : available > 0 && !allTiersSoldOut ? (
-                <Button fullWidth size="lg" onClick={handlePurchase} disabled={purchasing || isOrg}>
-                  {purchasing ? 'Procesando...' : isOrg ? 'No puedes comprar tu propio evento'
+                <Button fullWidth size="lg" onClick={handlePurchase} disabled={purchasing}>
+                  {purchasing ? 'Procesando...'
                     : activeTier ? `Comprar ${activeTier.name}` : 'Comprar Ticket'}
                 </Button>
               ) : (

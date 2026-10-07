@@ -17,7 +17,7 @@ import './RaveMode.css'
 const ACTIONS = [
   { key: 'water', label: 'Agua', icon: <FiDroplet />, serviceType: 'water' },
   { key: 'toilet', label: 'Baños', icon: <MdWc />, serviceType: 'toilet' },
-  { key: 'rest', label: 'Descanso', icon: <MdChair />, serviceType: 'rest' },
+  { key: 'rest', label: 'Respiro', icon: <MdChair />, serviceType: 'rest' },
   { key: 'quiet', label: 'Zona tranquila', icon: <MdVolumeOff />, serviceType: null, zoneType: 'quiet' },
   { key: 'smoking', label: 'Fumar', icon: <MdSmokingRooms />, serviceType: 'smoking' },
   { key: 'firstaid', label: 'First Aid', icon: <MdLocalHospital />, serviceType: 'firstaid' },
@@ -80,9 +80,16 @@ const RaveMode = () => {
   // Open the "next set for you" → route to its room
   const openNextSet = () => {
     if (!next) return
-    // We don't store per-act stage, so route to the main floor's back room as a stand-in
-    const room = (venue?.zones || []).find((z) => z.type === 'stage' && z.id !== 'main') || (venue?.zones || [])[0]
-    const anchor = room?.id === 'second' ? warehouseAnchors.concrete : warehouseAnchors.main
+    // We don't store per-act stage, so route to a performance area as a stand-in:
+    // prefer a secondary booth/stage, else the first booth/stage, else first zone.
+    const zones = venue?.zones || []
+    const isStage = (z) => z.type === 'booth' || z.type === 'stage'
+    const room = zones.find((z) => isStage(z) && z.id !== 'main' && z.id !== 'booth')
+      || zones.find((z) => isStage(z))
+      || zones[0]
+    const anchor = room && typeof room.x === 'number'
+      ? { x: room.x + (room.w || 0) / 2, y: room.y + (room.h || 0) / 2 }
+      : warehouseAnchors.main
     setPanel({
       title: next.name,
       subtitle: room ? room.label : null,

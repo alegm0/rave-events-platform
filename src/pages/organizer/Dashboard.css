@@ -37,10 +37,15 @@
 .dash-onb-step h3 { font-size: 0.8rem; color: #fff; font-weight: 700; margin-bottom: 0.1rem; text-transform: none; letter-spacing: 0; }
 .dash-onb-step p { font-size: 0.7rem; color: rgba(255,255,255,0.4); line-height: 1.3; }
 
-/* Stats */
-.dash-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; margin-bottom: 2px; }
-.dash-stat-card { background: #141414; padding: 1.5rem; transition: background 0.3s ease; }
-.dash-stat-card:hover { background: #1a1a1a; }
+/* Stats — read-only summary (NOT clickable). No hover, flatter look, a caption
+   so it reads as information rather than a row of buttons. */
+.dash-stats { margin-bottom: 2px; }
+.dash-stats-caption {
+  display: block; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.12em;
+  color: rgba(255,255,255,0.3); margin-bottom: 0.6rem;
+}
+.dash-stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; }
+.dash-stat-card { background: #121212; padding: 1.5rem; cursor: default; }
 .dash-stat-top { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; }
 .dash-stat-icon {
   width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
@@ -85,8 +90,15 @@
 .dash-action-card {
   display: flex; align-items: center; gap: 1.25rem; padding: 1.5rem;
   background: #141414; color: inherit; text-decoration: none; transition: all 0.2s ease;
+  /* Accent bar + arrow cue so these read clearly as clickable actions */
+  border-left: 3px solid #ff3d00; cursor: pointer; position: relative;
 }
-.dash-action-card:hover { background: #1a1a1a; }
+.dash-action-card::after {
+  content: '→'; position: absolute; right: 1.25rem; color: rgba(255,255,255,0.25);
+  font-size: 1rem; transition: transform 0.2s ease, color 0.2s ease;
+}
+.dash-action-card:hover { background: #1f1f1f; }
+.dash-action-card:hover::after { color: #ff3d00; transform: translateX(4px); }
 .dash-action-icon {
   width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;
   background: rgba(255,61,0,0.08); color: #ff3d00; font-size: 1.1rem; flex-shrink: 0;
@@ -159,14 +171,16 @@
 .me-mini-label { font-size: 0.55rem; color: rgba(255,255,255,0.35); text-transform: uppercase; letter-spacing: 0.08em; }
 .me-card-progress { height: 3px; background: rgba(255,255,255,0.06); margin-bottom: 1.25rem; overflow: hidden; }
 .me-card-progress-bar { height: 100%; background: #ff3d00; transition: width 0.5s ease; }
-.me-card-actions { display: flex; gap: 0.5rem; }
-.me-card-actions a { flex: 1; }
+.me-card-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+/* Each action takes an equal share but can wrap to a new row instead of
+   clipping. min-width keeps icon + label readable (no squeezed/cut buttons). */
+.me-card-actions a { flex: 1 1 calc(50% - 0.25rem); min-width: 120px; }
 .me-card-actions .btn { width: 100%; justify-content: center; }
 
 /* ═══ Responsive ═══ */
 @media (max-width: 768px) {
   .dash-page { padding: 5.5rem 0 3rem; }
-  .dash-stats { grid-template-columns: repeat(2, 1fr); }
+  .dash-stats-grid { grid-template-columns: repeat(2, 1fr); }
   .dash-actions { grid-template-columns: 1fr; }
   .dash-onb-content { padding: 2rem; }
   .dash-onb-title { font-size: 1.8rem; }
@@ -222,3 +236,64 @@
 .me-empty { text-align: center; padding: 5rem 2rem; background: #141414; }
 .me-empty-text { font-size: 1.2rem; color: #fff; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 0.5rem; }
 .me-empty-sub { color: rgba(255,255,255,0.4); font-size: 0.9rem; margin-bottom: 2rem; }
+
+/* ═══ Attendee list (Event Analytics) ═══ */
+.ea-attendees {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+/* ONE grid definition shared by header and rows → columns always line up. */
+.ea-att-row {
+  display: grid;
+  grid-template-columns: 1.4fr 1.6fr 110px 90px;
+  gap: 1rem;
+  align-items: center;
+  padding: 0.85rem 1.1rem;
+  background: #141414;
+}
+.ea-att-head {
+  background: #1a1a1a;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(255, 255, 255, 0.5);
+}
+.ea-att-name { color: #fff; font-size: 0.85rem; font-weight: 500; }
+.ea-att-email { color: rgba(255, 255, 255, 0.45); font-size: 0.8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ea-att-date { color: rgba(255, 255, 255, 0.35); font-size: 0.75rem; }
+.ea-att-badge {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.ea-att-badge.is-in { background: rgba(76, 175, 80, 0.15); color: #4caf50; }
+.ea-att-badge.is-valid { background: rgba(33, 150, 243, 0.15); color: #2196f3; }
+.ea-att-badge.is-pending { background: rgba(255, 152, 0, 0.15); color: #ff9800; }
+
+/* Mobile: each attendee becomes a stacked card with inline labels. */
+@media (max-width: 640px) {
+  .ea-att-head { display: none; }
+  .ea-att-row {
+    grid-template-columns: 1fr;
+    gap: 0.4rem;
+    padding: 0.9rem 1rem;
+  }
+  .ea-att-row > span { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+  .ea-att-row > span::before {
+    content: attr(data-label);
+    font-size: 0.62rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(255, 255, 255, 0.35);
+  }
+  .ea-att-name { font-weight: 600; }
+  .ea-att-email { white-space: normal; text-align: right; word-break: break-all; }
+}

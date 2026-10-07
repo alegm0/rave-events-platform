@@ -34,6 +34,38 @@ const IMAGES = [
 
 const today = new Date().toISOString().split('T')[0]
 
+// Robust line-up parser: accepts almost any format people copy from flyers,
+// Instagram or websites and turns it into [{ time, name }]. It splits on new
+// lines AND commas/bullets (one-line lists), pulls out a time wherever it is,
+// and strips common separators and junk. The name is what matters — it's what
+// gets searched on Deezer/Spotify.
+const parseLineup = (raw) => {
+  if (!raw?.trim()) return []
+  // Split on newlines, commas, bullets, pipes and middots
+  const chunks = raw
+    .split(/[\n,•·|]+/)
+    .map((c) => c.trim())
+    .filter(Boolean)
+
+  const timeRe = /(\d{1,2}[:.]\d{2})/ // 23:00 or 23.00, anywhere in the chunk
+
+  return chunks
+    .map((chunk) => {
+      let time = ''
+      const tMatch = chunk.match(timeRe)
+      if (tMatch) time = tMatch[1].replace('.', ':')
+      // Remove the time and common separators/prefixes to get a clean name
+      let name = chunk
+        .replace(timeRe, '')
+        .replace(/^[\s\-–—@·•>*.]+|[\s\-–—@·•>*.]+$/g, '') // trim junk at ends
+        .replace(/\s*[-–—@]\s*$/, '') // dangling separator
+        .replace(/\b(hrs?|hs|pm|am)\b/gi, '') // leftover time words
+        .trim()
+      return { time, name }
+    })
+    .filter((a) => a.name && a.name.length > 1) // drop empties / stray symbols
+}
+
 const CreateEvent = () => {
   const { currentUser } = useAuth()
   const navigate = useNavigate()
@@ -83,8 +115,18 @@ const CreateEvent = () => {
       if (!form.city.trim()) e.city = 'La ciudad es obligatoria'
     }
     if (s === 3) {
-      const price = parseFloat(form.price)
-      if (isNaN(price) || price < 0) e.price = 'Precio inválido'
+      if (form.pricingMode === 'tiers') {
+        // Validate the phases: each named phase needs a valid price and qty.
+        const filled = form.tiers.filter(t => t.name || t.price || t.qty)
+        if (filled.length === 0) {
+          e.price = 'Agrega al menos una fase'
+        } else if (filled.some(t => isNaN(parseFloat(t.price)) || parseFloat(t.price) < 0 || isNaN(parseInt(t.qty)) || parseInt(t.qty) < 1)) {
+          e.price = 'Cada fase necesita precio y cantidad válidos'
+        }
+      } else {
+        const price = parseFloat(form.price)
+        if (isNaN(price) || price < 0) e.price = 'Precio inválido'
+      }
       const cap = parseInt(form.capacity)
       if (isNaN(cap) || cap < 10) e.capacity = 'Mínimo 10 personas'
       if (cap > 50000) e.capacity = 'Máximo 50,000 personas'
@@ -101,15 +143,23 @@ const CreateEvent = () => {
     if (!validateStep(3)) { setStep(3); return }
     setUploading(true)
     try {
-      // Upload image to Firebase Storage if it's a local file
+      // Upload a local image to Firebase Storage. Storage upload can hang when
+      // CORS isn't configured for this origin (common in local dev), so we race
+      // it against a timeout and, if it fails/hangs, fall back to a gallery
+      // image instead of leaving the organizer stuck on "Subiendo..." forever.
       let finalImageUrl = form.imageUrl || IMAGES[0]
       if (form.uploadedFile) {
         try {
-          finalImageUrl = await uploadImage(form.uploadedFile, `events/${currentUser.id}`)
+          const timeout = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('timeout')), 15000))
+          finalImageUrl = await Promise.race([
+            uploadImage(form.uploadedFile, `events/${currentUser.id}`),
+            timeout,
+          ])
         } catch (uploadErr) {
-          toast.error('Error subiendo imagen: ' + uploadErr.message)
-          setUploading(false)
-          return
+          // Don't block publishing — use a gallery image and warn.
+          finalImageUrl = IMAGES[0]
+          toast.warning('No se pudo subir tu imagen (revisa la conexión/CORS). Usamos una de la galería; puedes cambiarla luego.')
         }
       }
 
@@ -123,9 +173,21 @@ const CreateEvent = () => {
         location: form.location.trim(),
         address: form.address.trim(),
         city: form.city.trim(),
-        price: form.pricingMode === 'single' ? (parseFloat(form.price) || 0) : parseFloat(form.tiers[0]?.price || 0),
+        price: (() => {
+          if (form.pricingMode === 'single') return parseFloat(form.price) || 0
+          // Headline price = lowest *paid* phase (so a $0 early phase doesn't make
+          // the whole event read as free). Fall back to the first phase's price.
+          const prices = form.tiers.map(t => parseFloat(t.price)).filter(p => !isNaN(p))
+          const paid = prices.filter(p => p > 0)
+          if (paid.length) return Math.min(...paid)
+          return prices.length ? Math.min(...prices) : 0
+        })(),
         pricingMode: form.pricingMode,
-        tiers: form.pricingMode === 'tiers' ? form.tiers.filter(t => t.name && t.price) : [],
+        // Keep every named phase that has a quantity, even if its price is 0
+        // (free early tickets are a valid phase).
+        tiers: form.pricingMode === 'tiers'
+          ? form.tiers.filter(t => t.name && t.qty && !isNaN(parseFloat(t.price)))
+          : [],
         capacity: parseInt(form.capacity) || 200,
         genre: form.genre,
         imageUrl: finalImageUrl,
@@ -254,19 +316,16 @@ const CreateEvent = () => {
                   ) : (
                     <div>
                       <textarea value={bulkLineup} onChange={e => setBulkLineup(e.target.value)}
-                        placeholder="Pega tu lista de artistas, uno por línea:&#10;23:00 Amelie Lens&#10;01:00 FJAAK&#10;03:00 Kobosil&#10;&#10;O solo nombres:&#10;Amelie Lens&#10;FJAAK&#10;Kobosil"
-                        rows={6} style={{ width: '100%', padding: '0.75rem', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: '0.85rem', fontFamily: 'var(--font-body)', resize: 'vertical' }} />
+                        placeholder={"Pega tu line-up en casi cualquier formato. Ejemplos que funcionan:\n\n23:00 Amelie Lens\nFJAAK - 01:00\nCharlotte de Witte @ 03:00\n\nO una lista separada por comas:\nAmelie Lens, FJAAK, Charlotte de Witte\n\nO solo nombres, uno por línea."}
+                        rows={7} style={{ width: '100%', padding: '0.75rem', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: '0.85rem', fontFamily: 'var(--font-body)', resize: 'vertical' }} />
                       <button type="button" className="ce-lineup-add" style={{ marginTop: '0.5rem' }} onClick={() => {
-                        const lines = bulkLineup.split('\n').filter(l => l.trim())
-                        const parsed = lines.map(line => {
-                          const timeMatch = line.match(/^(\d{1,2}:\d{2})\s+(.+)/)
-                          if (timeMatch) return { time: timeMatch[1], name: timeMatch[2].trim() }
-                          return { time: '', name: line.trim() }
-                        })
+                        const parsed = parseLineup(bulkLineup)
                         set('lineup', [...form.lineup, ...parsed])
                         setBulkLineup('')
                         setLineupMode('individual')
-                      }}>Importar {bulkLineup.split('\n').filter(l => l.trim()).length} artistas</button>
+                      }} disabled={parseLineup(bulkLineup).length === 0}>
+                        {(() => { const n = parseLineup(bulkLineup).length; return n > 0 ? `Importar ${n} ${n === 1 ? 'artista' : 'artistas'}` : 'Pega tu line-up arriba' })()}
+                      </button>
                     </div>
                   )}
                 </div>
@@ -400,6 +459,7 @@ const CreateEvent = () => {
                       ))}
                       <button type="button" className="ce-lineup-add" onClick={() => set('tiers', [...form.tiers, { name: '', price: '', qty: '' }])}>+ Agregar fase</button>
                     </div>
+                    {errors.price && <span className="ce-error">{errors.price}</span>}
                     <span className="ce-hint">Cuando se agotan los tickets de una fase, se activa la siguiente.</span>
                   </div>
                 )}
@@ -414,10 +474,37 @@ const CreateEvent = () => {
                 </div>
 
                 {(() => {
+                  const cap = parseInt(form.capacity || 0) || 0
                   let rev = 0
-                  if (form.pricingMode === 'single') rev = parseFloat(form.price || 0) * parseInt(form.capacity || 0)
-                  else form.tiers.forEach(t => { rev += parseFloat(t.price || 0) * parseInt(t.qty || 0) })
-                  return rev > 0 ? (<div className="ce-revenue-preview"><span>Ingreso potencial</span><strong>{'$' + rev.toLocaleString()}</strong></div>) : null
+                  let tiersQty = 0
+                  if (form.pricingMode === 'single') {
+                    rev = parseFloat(form.price || 0) * cap
+                  } else {
+                    // Tiers sell in order and can never exceed total capacity:
+                    // fill each phase up to whatever room is left.
+                    let remaining = cap
+                    form.tiers.forEach(t => {
+                      const qty = parseInt(t.qty || 0) || 0
+                      tiersQty += qty
+                      const sellable = Math.max(0, Math.min(qty, remaining))
+                      rev += parseFloat(t.price || 0) * sellable
+                      remaining -= sellable
+                    })
+                  }
+                  // Warn when the phases add up to more (or fewer) than capacity.
+                  const over = form.pricingMode === 'tiers' && tiersQty > cap
+                  const under = form.pricingMode === 'tiers' && tiersQty > 0 && tiersQty < cap
+                  if (rev <= 0) return null
+                  return (
+                    <div className="ce-revenue-preview">
+                      <div className="ce-revenue-main">
+                        <span>Ingreso potencial</span>
+                        <strong>{'AUD $' + rev.toLocaleString()}</strong>
+                      </div>
+                      {over && <span className="ce-revenue-note">Las fases suman {tiersQty} tickets pero la capacidad es {cap}. Solo se venderán {cap}.</span>}
+                      {under && <span className="ce-revenue-note">Las fases suman {tiersQty} tickets; quedan {cap - tiersQty} sin asignar a una fase.</span>}
+                    </div>
+                  )
                 })()}
               </div>
             )}
@@ -563,9 +650,29 @@ const CreateEvent = () => {
                   <p className="ce-preview-meta"><FiMapPin /> {form.location}{form.city ? `, ${form.city}` : ''}</p>
                 )}
                 <div className="ce-preview-footer">
-                  <span className="ce-preview-price">
-                    {parseFloat(form.price) === 0 ? 'Gratis' : `$${parseFloat(form.price || 0).toFixed(2)}`}
-                  </span>
+                  {(() => {
+                    if (form.pricingMode === 'tiers') {
+                      // Headline = the lowest *paid* phase, shown as "desde $X".
+                      // A $0 phase (free early tickets) shouldn't make the whole
+                      // event read as "Gratis" when later phases are paid.
+                      const prices = form.tiers
+                        .map(t => parseFloat(t.price))
+                        .filter(p => !isNaN(p))
+                      const paid = prices.filter(p => p > 0)
+                      if (paid.length === 0) {
+                        // every phase is free (or none set yet)
+                        return <span className="ce-preview-price">{prices.length ? 'Gratis' : '—'}</span>
+                      }
+                      const min = Math.min(...paid)
+                      return <span className="ce-preview-price">desde ${min.toFixed(2)}</span>
+                    }
+                    const price = parseFloat(form.price || 0)
+                    return (
+                      <span className="ce-preview-price">
+                        {price === 0 ? 'Gratis' : `$${price.toFixed(2)}`}
+                      </span>
+                    )
+                  })()}
                   {form.capacity && <span className="ce-preview-cap"><FiUsers /> {form.capacity}</span>}
                 </div>
               </div>

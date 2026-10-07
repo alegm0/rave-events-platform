@@ -130,3 +130,20 @@
   .lo-row-code { display: none; }
   .lo-bar-rev { margin-left: 0; }
 }
+
+/* Scheduled (event still far off) — live panel not operable yet */
+.lo-scheduled {
+  text-align: center;
+  padding: 4rem 1.5rem;
+  background: #141414;
+  border: 1px solid rgba(255,255,255,0.06);
+  margin-top: 1rem;
+}
+.lo-scheduled svg { font-size: 2.5rem; color: #ff9800; margin-bottom: 1rem; }
+.lo-scheduled h2 { color: #fff; font-size: 1.25rem; margin-bottom: 0.75rem; }
+.lo-scheduled p { color: rgba(255,255,255,0.6); font-size: 0.9rem; max-width: 520px; margin: 0 auto 0.5rem; line-height: 1.6; }
+.lo-scheduled-sub { color: rgba(255,255,255,0.4) !important; font-size: 0.82rem !important; }
+.lo-scheduled-actions { display: flex; gap: 0.75rem; justify-content: center; margin-top: 1.5rem; }
+
+/* "Programado" phase pill */
+.lo-phase--scheduled { background: rgba(255,152,0,0.12); color: #ff9800; }

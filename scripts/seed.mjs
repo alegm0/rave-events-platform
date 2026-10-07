@@ -343,6 +343,7 @@ const run = async () => {
         const rid = genId()
         await writer.set(db.collection('reviews').doc(rid), {
           id: rid, userId: r.id, eventId: event.id,
+          userName: r.displayName || r.name || null,
           rating: rv.rating, text: rv.text,
           createdAt: new Date().toISOString(), seed: true,
         })
@@ -430,6 +431,7 @@ const run = async () => {
         const rid = genId()
         await writer.set(db.collection('reviews').doc(rid), {
           id: rid, userId: r.id, eventId: ev.id,
+          userName: r.displayName || r.name || null,
           rating: rv.rating, text: rv.text,
           createdAt: new Date().toISOString(), seed: true,
         })

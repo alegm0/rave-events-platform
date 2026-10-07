@@ -59,7 +59,7 @@ export const buildAccessibilityNotes = (venue, comfortProfile = {}) => {
   }
   if (comfortProfile.restAreas) {
     const has = findServices(venue, 'rest').length > 0
-    notes.push({ ok: has, text: has ? 'Zona de descanso disponible' : 'Sin zona de descanso declarada' })
+    notes.push({ ok: has, text: has ? 'Zona de respiro disponible' : 'Sin zona de respiro declarada' })
   }
   if (comfortProfile.quieterAreas) {
     const has = (venue.zones || []).some((z) => z.type === 'quiet')

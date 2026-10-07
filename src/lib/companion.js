@@ -44,9 +44,9 @@ const INTENTS = [
       const rest = findServices(venue, 'rest')
       const quiet = (venue?.zones || []).filter((z) => z.type === 'quiet')
       const parts = []
-      if (rest.length) parts.push(`zona de descanso (${rest.map((s) => s.label).join(', ')})`)
+      if (rest.length) parts.push(`zona de respiro (${rest.map((s) => s.label).join(', ')})`)
       if (quiet.length) parts.push(`zona tranquila (${quiet.map((z) => z.label).join(', ')})`)
-      if (!parts.length) return 'Este venue no declara zonas de descanso ni áreas tranquilas todavía.'
+      if (!parts.length) return 'Este venue no declara zonas de respiro ni áreas tranquilas todavía.'
       return `Puedes tomar un respiro en: ${parts.join(' y ')}.`
     },
   },

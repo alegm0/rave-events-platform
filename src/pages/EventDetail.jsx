@@ -294,8 +294,9 @@ const EventDetail = () => {
             {/* Going section */}
             {goingCount > 0 && (
             <div className="ed-section">
-              <h2 className="ed-section-title">🎉 {goingCount} {goingCount === 1 ? 'persona va' : 'personas van'}</h2>
-              {/* Privacy: show anonymous initials avatars, never full names */}
+              {/* "Van" = attendees. tickets == ticketsSold now, so this matches
+                  "vendidos". Avatars are a privacy-safe sample with "+N más". */}
+              <h2 className="ed-section-title">🎉 {Math.max(goingCount, soldCount)} {Math.max(goingCount, soldCount) === 1 ? 'persona va' : 'personas van'}</h2>
               {goingUsers.length > 0 && (
                 <div style={{ display: 'flex', alignItems: 'center' }}>
                   {goingUsers.map((u, i) => (
@@ -313,9 +314,9 @@ const EventDetail = () => {
                       {initials(u.displayName)}
                     </div>
                   ))}
-                  {goingCount > goingUsers.length && (
+                  {Math.max(goingCount, soldCount) > goingUsers.length && (
                     <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.45)', marginLeft: '0.8rem' }}>
-                      +{goingCount - goingUsers.length} más
+                      +{Math.max(goingCount, soldCount) - goingUsers.length} más
                     </span>
                   )}
                 </div>
@@ -327,8 +328,11 @@ const EventDetail = () => {
             {new Date(event.date) < new Date() && (
             <div className="ed-section">
               <h2 className="ed-section-title">⭐ Reviews {avgRating > 0 && `(${avgRating}/5)`}</h2>
-              {currentUser && !isOrg && !reviews.find(r => r.userId === currentUser.id) && (
+              {/* Only attendees (people who had a ticket) can rate the event, and
+                  only once. If you didn't go, you can't review it. */}
+              {currentUser && !isOrg && alreadyOwned && !reviews.find(r => r.userId === currentUser.id) && (
                 <div style={{ background: '#141414', padding: '1.25rem', marginBottom: '1rem', border: '1px solid rgba(255,255,255,0.06)' }}>
+                  <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.8rem', marginBottom: '0.75rem' }}>Fuiste a este evento. ¿Cómo estuvo?</p>
                   <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
                     {[1,2,3,4,5].map(n => (
                       <button key={n} onClick={() => setReviewRating(n)}
@@ -337,7 +341,7 @@ const EventDetail = () => {
                   </div>
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
                     <input type="text" value={reviewText} onChange={e => setReviewText(e.target.value)}
-                      placeholder="¿Cómo estuvo el evento?"
+                      placeholder="Cuéntale a otros ravers cómo estuvo..."
                       style={{ flex: 1, padding: '0.75rem', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: '0.85rem', fontFamily: 'var(--font-body)' }} />
                     <Button size="sm" onClick={async () => {
                       if (!reviewText.trim()) return
@@ -347,6 +351,12 @@ const EventDetail = () => {
                     }}>Publicar</Button>
                   </div>
                 </div>
+              )}
+              {/* Logged-in user who didn't attend: explain why they can't review */}
+              {currentUser && !isOrg && !alreadyOwned && !reviews.find(r => r.userId === currentUser.id) && (
+                <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.8rem', marginBottom: '1rem' }}>
+                  Solo quienes asistieron pueden dejar una review de este evento.
+                </p>
               )}
               {reviews.length > 0 ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', background: 'rgba(255,255,255,0.04)' }}>

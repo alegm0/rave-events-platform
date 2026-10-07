@@ -155,19 +155,20 @@ export const getRecommendations = (userProfile, allEvents, excludeIds = [], limi
     let bonus = 0
     const reasons = []
 
-    // Genre match bonus
-    if (userProfile.genreWeights[event.genre] > 0.5) {
+    // Genre match: the bonus still only rewards a strong match, but the REASON
+    // reflects any genre the user actually attends, worded by how much they do.
+    const gw = userProfile.genreWeights[event.genre] || 0
+    if (gw > 0.5) {
       bonus += 0.15
-      reasons.push(`Te gusta el ${event.genre}`)
+      reasons.push(`Te encanta el ${event.genre}`)
+    } else if (gw >= 0.3) {
+      bonus += 0.08
+      reasons.push(`Sueles ir a ${event.genre}`)
+    } else if (gw > 0) {
+      reasons.push(`Has ido a ${event.genre}`)
     }
 
-    // City match bonus
-    if (userProfile.cities[event.city]) {
-      bonus += 0.1
-      reasons.push(`En ${event.city}, tu zona`)
-    }
-
-    // Popularity bonus (selling fast)
+    // Popularity bonus (selling fast) — a more concrete, useful signal
     const soldPct = event.ticketsSold / (event.capacity || 200)
     if (soldPct > 0.6) {
       bonus += 0.05
@@ -178,7 +179,15 @@ export const getRecommendations = (userProfile, allEvents, excludeIds = [], limi
     const daysAway = Math.ceil((new Date(event.date) - now) / (1000 * 60 * 60 * 24))
     if (daysAway <= 14) {
       bonus += 0.05
-      reasons.push('Pronto')
+      reasons.push('Muy pronto')
+    }
+
+    // City match: keep the scoring bonus, but only SHOW it as a reason when we
+    // don't already have a stronger, more specific reason (avoids every card
+    // repeating the same "tu zona" line when all events are in one city).
+    if (userProfile.cities[event.city]) {
+      bonus += 0.1
+      if (reasons.length === 0) reasons.push(`En ${event.city}, tu zona`)
     }
 
     if (reasons.length === 0) reasons.push('Basado en tu perfil')

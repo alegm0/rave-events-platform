@@ -195,7 +195,10 @@ const run = async () => {
     const plan = eventPlans[i]
     const org = organizers[i % organizers.length]
     const id = genId()
-    const capacity = pick([300, 500, 800, 1200])
+    // Demo-scale venues (tens, not thousands) so sell-through stays believable
+    // and ticketsSold can match real attendee accounts. Final sales/capacity are
+    // recalibrated by scripts/fix-sales.mjs after seeding.
+    const capacity = pick([40, 50, 60, 80, 120])
     // Prices in AUD (Brisbane). Tiered events rise across phases.
     const tiers = plan.tiered
       ? [
@@ -212,14 +215,18 @@ const run = async () => {
       date: plan.date,
       time: pick(['21:00', '22:00', '23:00']),
       duration: pick([6, 8, 10, 12]),
-      location: pick(['The TBC Club', 'The MET Brisbane', 'The Warehouse', 'The Foundry', 'Riverstage']),
-      address: pick([
-        '365 Brunswick St, Fortitude Valley',
-        '620 Ann St, Fortitude Valley',
-        '27 Warner St, Fortitude Valley',
-        '228 Wickham St, Fortitude Valley',
-        '59 Gardens Point Rd, City Botanic Gardens',
-      ]),
+      // Venue + address picked TOGETHER so each venue keeps its one real address
+      // (picking them independently produced the same venue at several addresses)
+      ...(() => {
+        const v = pick([
+          { location: 'The TBC Club', address: '365 Brunswick St, Fortitude Valley' },
+          { location: 'The MET Brisbane', address: '620 Ann St, Fortitude Valley' },
+          { location: 'The Warehouse', address: '27 Warner St, Fortitude Valley' },
+          { location: 'The Foundry', address: '228 Wickham St, Fortitude Valley' },
+          { location: 'Riverstage', address: '59 Gardens Point Rd, City Botanic Gardens' },
+        ])
+        return v
+      })(),
       city: org.brand.city,
       price,
       pricingMode: plan.tiered ? 'tiers' : 'single',

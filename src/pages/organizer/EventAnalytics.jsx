@@ -112,7 +112,7 @@ const EventAnalytics = () => {
         <div style={{ background: '#141414', padding: '1.5rem', marginBottom: '2px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
             <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem' }}>Capacidad</span>
-            <span style={{ color: '#fff', fontSize: '0.8rem', fontWeight: 600 }}>{stats.total} / {event.capacity || 500}</span>
+            <span style={{ color: '#fff', fontSize: '0.8rem', fontWeight: 600 }}>{stats.total} / {event.capacity || 120}</span>
           </div>
           <div style={{ height: '6px', background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
             <div style={{ height: '100%', width: `${Math.min(pct, 100)}%`, background: pct > 80 ? '#ff3d00' : pct > 50 ? '#ff9800' : '#4caf50', transition: 'width 0.5s ease' }}></div>

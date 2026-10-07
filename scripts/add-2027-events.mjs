@@ -63,7 +63,8 @@ const run = async () => {
 
     const org = orgs[i % orgs.length]
     const id = genId()
-    const capacity = pick([300, 500, 800, 1200])
+    // Demo-scale venues (recalibrated afterwards by scripts/fix-sales.mjs)
+    const capacity = pick([40, 50, 60, 80, 120])
     const tiers = plan.tiered
       ? [
           { name: 'Early Bird', price: '45', qty: '100' },
@@ -79,13 +80,13 @@ const run = async () => {
       date: plan.date,
       time: pick(['21:00', '22:00', '23:00']),
       duration: pick([6, 8, 10, 12]),
-      location: pick(['The TBC Club', 'The MET Brisbane', 'The Warehouse', 'The Foundry', 'Riverstage']),
-      address: pick([
-        '365 Brunswick St, Fortitude Valley',
-        '620 Ann St, Fortitude Valley',
-        '27 Warner St, Fortitude Valley',
-        '228 Wickham St, Fortitude Valley',
-        '59 Gardens Point Rd, City Botanic Gardens',
+      // Venue + address picked together so each venue keeps its one real address
+      ...pick([
+        { location: 'The TBC Club', address: '365 Brunswick St, Fortitude Valley' },
+        { location: 'The MET Brisbane', address: '620 Ann St, Fortitude Valley' },
+        { location: 'The Warehouse', address: '27 Warner St, Fortitude Valley' },
+        { location: 'The Foundry', address: '228 Wickham St, Fortitude Valley' },
+        { location: 'Riverstage', address: '59 Gardens Point Rd, City Botanic Gardens' },
       ]),
       city: 'Brisbane',
       price,

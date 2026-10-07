@@ -63,6 +63,18 @@ const VenueMap = ({ venue }) => {
   const anyHighlight = serviceIds.size > 0 || zoneIds.size > 0
   const outdoor = venue.layout === 'outdoor'
 
+  // Map-highlighting preferences the user turned on (these are the ones that
+  // should surface pins). If some are on but produced no highlight, this venue
+  // simply doesn't offer them — we say so instead of leaving the user guessing.
+  const MAP_PREF_LABELS = {
+    quieterAreas: 'zonas tranquilas',
+    stepFree: 'rutas sin escalones',
+    accessibleToilets: 'baños accesibles',
+    restAreas: 'zonas de descanso',
+  }
+  const mapPrefsOn = Object.keys(MAP_PREF_LABELS).filter((k) => comfort[k])
+  const unmetPrefs = anyHighlight ? [] : mapPrefsOn.map((k) => MAP_PREF_LABELS[k])
+
   const selectZone = (z) => setSelected({ kind: 'zone', data: z })
   const selectService = (s) => setSelected({ kind: 'service', data: s })
   const selectPlanItem = (p) => {
@@ -242,7 +254,12 @@ const VenueMap = ({ venue }) => {
             )
           })}
         </ol>
-        {!anyHighlight && (
+        {!anyHighlight && unmetPrefs.length > 0 && (
+          <p className="venue-plan-hint">
+            <FiHeart /> Marcaste {unmetPrefs.length === 1 ? unmetPrefs[0] : `${unmetPrefs.slice(0, -1).join(', ')} y ${unmetPrefs[unmetPrefs.length - 1]}`}, pero este venue no{unmetPrefs.length === 1 ? ' la' : ' las'} ofrece. No inventamos servicios que no existen.
+          </p>
+        )}
+        {!anyHighlight && unmetPrefs.length === 0 && (
           <p className="venue-plan-hint">
             <FiHeart /> Marca tus preferencias de comodidad y accesibilidad en tu perfil y el mapa
             resaltará lo que necesitas.

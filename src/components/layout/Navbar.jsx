@@ -56,6 +56,20 @@ const Navbar = () => {
     }
   }
 
+  // Each notification links somewhere useful: a purchase/reminder about a ticket
+  // goes to Mis Tickets; anything tied to an event (subscription, reminder with
+  // eventId) opens that event. The dropdown closes on navigation.
+  const handleNotifClick = (n) => {
+    setShowNotifs(false)
+    if (n.type === 'purchase') {
+      navigate('/my-tickets')
+    } else if (n.eventId) {
+      navigate(`/event/${n.eventId}`)
+    } else {
+      navigate('/my-tickets')
+    }
+  }
+
   const isHome = location.pathname === '/'
   const isActive = (path) => location.pathname === path ? 'active' : ''
 
@@ -114,14 +128,19 @@ const Navbar = () => {
                       {notifications.length > 0 ? (
                         <div className="notif-list">
                           {notifications.map(n => (
-                            <div key={n.id} className={`notif-item ${n.read ? '' : 'unread'}`}>
+                            <button
+                              key={n.id}
+                              type="button"
+                              className={`notif-item ${n.read ? '' : 'unread'}`}
+                              onClick={() => handleNotifClick(n)}
+                            >
                               {n.image && <img src={n.image} alt="" className="notif-img" />}
                               <div className="notif-content">
                                 <p className="notif-title">{n.title}</p>
                                 <p className="notif-msg">{n.message}</p>
                                 <span className="notif-time">{timeAgo(n.createdAt)}</span>
                               </div>
-                            </div>
+                            </button>
                           ))}
                         </div>
                       ) : (

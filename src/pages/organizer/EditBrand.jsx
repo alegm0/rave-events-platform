@@ -190,7 +190,7 @@ const EditBrand = () => {
                 <div className="eb-field">
                   <label><FiMapPin /> Ciudad</label>
                   <input type="text" value={form.city} onChange={e => set('city', e.target.value)}
-                    placeholder="Ej: Bogotá" />
+                    placeholder="Ej: Brisbane" />
                 </div>
                 <div className="eb-field">
                   <label>Año de fundación</label>

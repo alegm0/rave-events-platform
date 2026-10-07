@@ -132,7 +132,7 @@ const run = async () => {
   const orgId = `ttest-org-${genId()}`
   const raverId = `ttest-raver-${genId()}`
   // Raver with accessibility needs turned on
-  await db.collection('users').doc(orgId).set({ id: orgId, email: `${orgId}@t.com`, displayName: 'Org Traza', role: 'organizer', brand: { name: 'Colectivo Traza', bio: 'test', city: 'Bogotá' }, ttest: true })
+  await db.collection('users').doc(orgId).set({ id: orgId, email: `${orgId}@t.com`, displayName: 'Org Traza', role: 'organizer', brand: { name: 'Colectivo Traza', bio: 'test', city: 'Brisbane' }, ttest: true })
   await db.collection('users').doc(raverId).set({
     id: raverId, email: `${raverId}@t.com`, displayName: 'Raver Traza', role: 'user',
     comfortProfile: { stepFree: true, accessibleToilets: true, quieterAreas: true, restAreas: true, simpleNavigation: true, minimalText: true },

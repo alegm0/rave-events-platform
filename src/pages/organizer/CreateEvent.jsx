@@ -48,7 +48,7 @@ const CreateEvent = () => {
   const [form, setForm] = useState({
     title: '', description: '', date: '', time: '22:00', duration: '6',
     multiDay: false, endDate: '',
-    location: '', address: '', city: '', price: '0', capacity: '200',
+    location: '', address: '', city: '', price: '0', capacity: '120',
     genre: '', imageUrl: '', imagePos: 50, minAge: '18',
     lineup: [],
     uploadedImage: null,
@@ -176,7 +176,7 @@ const CreateEvent = () => {
                 <div className="ce-field">
                   <label>Nombre del evento *</label>
                   <input type="text" value={form.title} onChange={e => set('title', e.target.value)}
-                    placeholder="Ej: Berghain Nights" maxLength={60} className={errors.title ? 'error' : ''} />
+                    placeholder="Ej: Fortitude Valley Warehouse" maxLength={60} className={errors.title ? 'error' : ''} />
                   <div className="ce-field-footer">
                     {errors.title && <span className="ce-error">{errors.title}</span>}
                     <span className="ce-counter">{form.title.length}/60</span>
@@ -350,7 +350,7 @@ const CreateEvent = () => {
                   <div className="ce-field">
                     <label>Ciudad *</label>
                     <input type="text" value={form.city} onChange={e => set('city', e.target.value)}
-                      placeholder="Ej: Bogotá" className={errors.city ? 'error' : ''} />
+                      placeholder="Ej: Brisbane" className={errors.city ? 'error' : ''} />
                     {errors.city && <span className="ce-error">{errors.city}</span>}
                   </div>
                 </div>
@@ -380,11 +380,11 @@ const CreateEvent = () => {
 
                 {form.pricingMode === 'single' ? (
                   <div className="ce-field">
-                    <label>Precio (USD)</label>
+                    <label>Precio (AUD)</label>
                     <input type="number" value={form.price} min="0" step="1"
                       onChange={e => set('price', e.target.value)} className={errors.price ? 'error' : ''} />
                     {errors.price && <span className="ce-error">{errors.price}</span>}
-                    <span className="ce-hint">{parseFloat(form.price) === 0 ? 'Evento gratuito' : `$${parseFloat(form.price || 0)} por ticket`}</span>
+                    <span className="ce-hint">{parseFloat(form.price) === 0 ? 'Evento gratuito' : `AUD $${parseFloat(form.price || 0)} por ticket`}</span>
                   </div>
                 ) : (
                   <div className="ce-field">

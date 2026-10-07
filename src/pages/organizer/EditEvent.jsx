@@ -259,7 +259,7 @@ const EditEvent = () => {
                   <input type="number" value={form.capacity} min="10" onChange={e => set('capacity', e.target.value)} />
                 </div>
                 <div className="ce-field">
-                  <label><FiDollarSign /> Precio (USD)</label>
+                  <label><FiDollarSign /> Precio (AUD)</label>
                   <input type="number" value={form.price} min="0" onChange={e => set('price', e.target.value)} />
                 </div>
               </div>

@@ -42,6 +42,21 @@ const TicketDetail = () => {
 
   if (!ticket) return <div className="td-loading"><div className="loader"></div></div>
 
+  // Has the event already finished? (start + duration in the past). A ticket for
+  // a past event can't be "valid" to enter, and can't be cancelled anymore.
+  const eventEnded = (() => {
+    if (!event?.date) return false
+    const [h, m] = (event.time || '23:00').split(':').map((n) => parseInt(n, 10) || 0)
+    const start = new Date(`${event.date}T00:00:00`)
+    start.setHours(h, m, 0, 0)
+    const end = new Date(start.getTime() + (event.duration || 6) * 3600000)
+    return end < new Date()
+  })()
+
+  // Status shown to the user: 'used' (scanned), 'ended' (event is over), or 'valid'.
+  const displayStatus = ticket.status === 'used' ? 'used' : eventEnded ? 'ended' : 'valid'
+  const statusLabel = displayStatus === 'used' ? '✓ Usado' : displayStatus === 'ended' ? '✓ Finalizado' : '● Válido'
+
   return (
     <div className="td-page">
       {/* Hero bg */}
@@ -61,8 +76,8 @@ const TicketDetail = () => {
               <div className="td-card-event-img">
                 <img src={event?.imageUrl || 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=600'} alt="" />
                 <div className="td-card-event-overlay"></div>
-                <span className={`td-status ${ticket.status}`}>
-                  {ticket.status === 'valid' ? '● Válido' : '✓ Usado'}
+                <span className={`td-status ${displayStatus}`}>
+                  {statusLabel}
                 </span>
               </div>
 
@@ -102,7 +117,13 @@ const TicketDetail = () => {
                   imageSettings={{ src: '', width: 0, height: 0 }} />
               </div>
               <p className="td-qr-code">{ticket.qrCode}</p>
-              <p className="td-qr-hint">Muestra este código en la entrada del evento</p>
+              <p className="td-qr-hint">
+                {displayStatus === 'ended'
+                  ? 'Este evento ya finalizó. Tu entrada queda como recuerdo.'
+                  : displayStatus === 'used'
+                    ? 'Entrada ya validada en la puerta.'
+                    : 'Muestra este código en la entrada del evento'}
+              </p>
             </div>
 
             {/* Details */}
@@ -177,8 +198,8 @@ const TicketDetail = () => {
               </ul>
             </div>
 
-            {/* Cancel ticket */}
-            {ticket.status === 'valid' && (
+            {/* Cancel ticket — only for valid tickets to events that haven't happened yet */}
+            {ticket.status === 'valid' && !eventEnded && (
               <div className="td-sidebar-card">
                 <h3><FiTrash2 /> Cancelar ticket</h3>
                 <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.8rem', marginBottom: '1rem', lineHeight: 1.5 }}>

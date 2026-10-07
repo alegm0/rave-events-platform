@@ -31,6 +31,7 @@
 }
 .td-status.valid { background: #4caf50; color: #fff; }
 .td-status.used { background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.7); }
+.td-status.ended { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.55); }
 
 .td-card-info { padding: 1.5rem 2rem; }
 .td-genre {

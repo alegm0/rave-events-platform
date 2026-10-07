@@ -583,7 +583,7 @@ export const VENUE_TEMPLATES = {
       { id: 'smoking', type: 'smoking', label: 'Smoking Area', x: 90, y: 30, walkMin: 3 },
       { id: 'exit', type: 'exit', label: 'Salida norte', x: 64, y: 90, walkMin: 3 },
     ],
-    knowBeforeYouGo: ['Trae documento de identidad', 'No hay guardarropa', 'Transporte cercano: estación Calle 45'],
+    knowBeforeYouGo: ['Trae documento de identidad', 'No hay guardarropa', 'Transporte cercano: estación Fortitude Valley'],
   },
   club: {
     layout: 'indoor',

@@ -60,7 +60,15 @@ const MyTickets = () => {
         {filtered.length > 0 ? (
           <div className="mt-list">
             {filtered.map(t => {
-              const isPast = t.event?.date ? new Date(t.event.date) < new Date() : false
+              // Past = the event has finished (start + duration), matching TicketDetail.
+              const isPast = (() => {
+                if (!t.event?.date) return false
+                const [h, m] = (t.event.time || '23:00').split(':').map((n) => parseInt(n, 10) || 0)
+                const start = new Date(`${t.event.date}T00:00:00`)
+                start.setHours(h, m, 0, 0)
+                const end = new Date(start.getTime() + (t.event.duration || 6) * 3600000)
+                return end < new Date()
+              })()
               return (
                 <Link to={`/ticket/${t.id}`} key={t.id} className={`mt-ticket ${isPast ? 'mt-ticket--past' : ''}`}>
                   <div className="mt-ticket-img">

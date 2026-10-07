@@ -68,10 +68,17 @@ const run = async () => {
     Array.isArray(ev.lineup) && ev.lineup.length > 0
       ? ok(`Lineup con ${ev.lineup.length} artistas`)
       : wrn('Evento sin lineup')
-    // Attendees (tickets) vs ticketsSold counter
+    // Public sales counter vs the real-account attendee sample.
+    // ticketsSold is the aggregate "sold" number shown to everyone; the real
+    // tickets in Firestore are a privacy-safe SAMPLE used for the attendee list
+    // and reviews (we can't create hundreds of real accounts). So the valid
+    // invariant is: 0 <= real sample <= ticketsSold <= capacity.
     const evTickets = tickets.filter((t) => t.eventId === ev._id)
-    if (evTickets.length === ev.ticketsSold) ok(`ticketsSold (${ev.ticketsSold}) coincide con tickets reales (${evTickets.length})`)
-    else wrn(`ticketsSold=${ev.ticketsSold} vs tickets reales=${evTickets.length}`)
+    const sold = ev.ticketsSold || 0
+    const cap = ev.capacity || 0
+    if (sold > cap && cap > 0) fail(`ticketsSold (${sold}) excede el aforo (${cap}) en "${ev.title}"`)
+    else if (evTickets.length > sold) fail(`hay más tickets reales (${evTickets.length}) que ticketsSold (${sold}) en "${ev.title}"`)
+    else ok(`Ventas coherentes: ${sold}/${cap} (${Math.round((sold / (cap || 1)) * 100)}%), muestra real ${evTickets.length}`)
     // Reviews + average rating
     const evReviews = reviews.filter((r) => r.eventId === ev._id)
     if (evReviews.length > 0) {

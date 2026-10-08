@@ -39,10 +39,14 @@ const Navbar = () => {
 
   // Keyboard shortcut Ctrl+K for search
   useEffect(() => {
+    // Global search is a raver/visitor feature; organizers don't get it (the
+    // button is hidden for them, and the shortcut is disabled too so the role
+    // matrix holds literally — not just visually).
+    if (isOrg) return
     const handler = (e) => { if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); setShowSearch(true) } }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [])
+  }, [isOrg])
 
   const handleLogout = async () => {
     try { await logout(); navigate('/') } catch (e) { console.error(e) }

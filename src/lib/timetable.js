@@ -11,7 +11,7 @@
 export const buildTimeline = (event) => {
   if (!event?.lineup?.length) return []
   const baseDate = event.date // 'YYYY-MM-DD'
-  const doorHour = parseInt((event.time || '22:00').split(':')[0], 10)
+  const doorHour = parseInt((event.time || '23:00').split(':')[0], 10)
 
   const toDate = (timeStr) => {
     const [h, m] = (timeStr || '00:00').split(':').map((n) => parseInt(n, 10))
@@ -80,4 +80,20 @@ export const isEventLive = (event, now = new Date()) => {
   start.setHours(h, m || 0, 0, 0)
   const end = new Date(start.getTime() + (event.duration || 6) * 3600 * 1000)
   return now >= start && now <= end
+}
+
+/**
+ * Has the event already finished? Uses the full operating window
+ * (start time + duration), NOT just the calendar day — so an event that is
+ * today but already over counts as ended. Single source of truth shared by
+ * discovery (events list, calendar, search, recommendations) and the ticket
+ * screens, so "past/future" is decided consistently everywhere.
+ */
+export const hasEventEnded = (event, now = new Date()) => {
+  if (!event?.date) return false
+  const [h, m] = (event.time || '23:00').split(':').map((n) => parseInt(n, 10) || 0)
+  const start = new Date(`${event.date}T00:00:00`)
+  start.setHours(h, m, 0, 0)
+  const end = new Date(start.getTime() + (event.duration || 6) * 3600 * 1000)
+  return end < now
 }

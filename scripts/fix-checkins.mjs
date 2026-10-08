@@ -31,8 +31,21 @@ async function run() {
     db.collection('tickets').get(),
   ])
 
+  // Map past events → their door-open timestamp, so we can scatter check-ins
+  // realistically across the first couple of hours instead of one instant.
   const pastEventIds = new Set()
-  eventsSnap.forEach((d) => { if (hasEnded(d.data())) pastEventIds.add(d.data().id || d.id) })
+  const doorOpen = {}
+  eventsSnap.forEach((d) => {
+    const e = d.data()
+    const eid = e.id || d.id
+    if (hasEnded(e)) {
+      pastEventIds.add(eid)
+      const [h, m] = (e.time || '23:00').split(':').map((n) => parseInt(n, 10) || 0)
+      const start = new Date(`${e.date}T00:00:00`); start.setHours(h, m, 0, 0)
+      doorOpen[eid] = start.getTime()
+    }
+  })
+  const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min
 
   let updated = 0
   let batch = db.batch()
@@ -41,11 +54,21 @@ async function run() {
   for (const docSnap of ticketsSnap.docs) {
     const t = docSnap.data()
     if (!pastEventIds.has(t.eventId)) continue   // only past events
-    if (t.status === 'used') continue            // already checked in
+    const base = doorOpen[t.eventId] || Date.now()
+
+    if (t.status === 'used') {
+      // Already checked in — just re-scatter its usedAt so check-ins aren't all
+      // stamped at the same instant (fixes the "everyone at 17:14" look).
+      batch.update(docSnap.ref, { usedAt: new Date(base + randInt(0, 180) * 60000).toISOString() })
+      batchCount++
+      if (batchCount >= 400) { await batch.commit(); batch = db.batch(); batchCount = 0 }
+      continue
+    }
 
     // ~85% show up; the rest stay as valid (no-shows).
     if (Math.random() < 0.85) {
-      batch.update(docSnap.ref, { status: 'used', usedAt: new Date().toISOString() })
+      const usedAt = new Date(base + randInt(0, 180) * 60000).toISOString()
+      batch.update(docSnap.ref, { status: 'used', usedAt })
       batchCount++
       updated++
       if (batchCount >= 400) { await batch.commit(); batch = db.batch(); batchCount = 0 }

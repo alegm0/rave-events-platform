@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { getEvents, getGoingCount, getTicketsByUser, getUserSubscriptions } from '../lib/db'
 import { useAuth } from '../context/AuthContext'
 import { buildUserProfile, getRecommendations } from '../lib/ai/recommendations'
+import { hasEventEnded } from '../lib/timetable'
 import { FiMapPin, FiSearch, FiArrowRight, FiEye, FiZap } from 'react-icons/fi'
 import Button from '../components/ui/Button'
 import { EventCardSkeleton } from '../components/ui/Skeleton'
@@ -20,9 +21,10 @@ const Events = () => {
 
   useEffect(() => {
     const loadEvents = async () => {
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      const data = (await getEvents()).filter(e => new Date(e.date) >= today)
+      // Show events that haven't ended yet (uses start + duration, so an event
+      // happening today that's still on is included; one that already finished
+      // today is not).
+      const data = (await getEvents()).filter(e => !hasEventEnded(e))
       setEvents(data)
       setFilteredEvents(data)
 
@@ -47,6 +49,8 @@ const Events = () => {
         const goingAsTickets = userSubs.map(s => ({ eventId: s.eventId })) // treat subs as "interest"
         const profile = buildUserProfile(userTickets, goingAsTickets, events)
         if (profile) {
+          // Pass followed artists so recommendations can cite line-up matches.
+          profile.savedArtists = userProfile.savedArtists || []
           const excludeIds = userTickets.map(t => t.eventId)
           const recs = getRecommendations(profile, events, excludeIds, 4)
           setRecommendations(recs.filter(r => r.score > 0.3))
@@ -60,7 +64,17 @@ const Events = () => {
 
   useEffect(() => {
     let f = events
-    if (searchTerm) f = f.filter(e => e.title.toLowerCase().includes(searchTerm.toLowerCase()) || e.location?.toLowerCase().includes(searchTerm.toLowerCase()))
+    if (searchTerm) {
+      const q = searchTerm.toLowerCase()
+      // Match the placeholder's promise: title, venue, genre, city AND line-up.
+      f = f.filter(e =>
+        e.title?.toLowerCase().includes(q) ||
+        e.location?.toLowerCase().includes(q) ||
+        e.genre?.toLowerCase().includes(q) ||
+        e.city?.toLowerCase().includes(q) ||
+        (e.lineup || []).some(a => (typeof a === 'string' ? a : a.name || '').toLowerCase().includes(q))
+      )
+    }
     if (activeGenre !== 'all') f = f.filter(e => e.genre?.toLowerCase().includes(activeGenre.toLowerCase()))
     setFilteredEvents(f)
   }, [searchTerm, activeGenre, events])
@@ -161,7 +175,6 @@ const Events = () => {
                   <span className="event-card-cta"><FiArrowRight /></span>
                 </div>
                 {event.genre && <span className="event-genre-tag">{event.genre}</span>}
-                {new Date(event.date) < new Date() && <span className="event-past-tag">Finalizado</span>}
               </div>
               <div className="event-card-body">
                 <div className="event-card-date">
@@ -175,7 +188,7 @@ const Events = () => {
                   {goingCounts[event.id] > 0 && <p className="event-card-going">🎉 {goingCounts[event.id]} van</p>}
                 </div>
                 <div className="event-card-price">
-                  {event.price === 0 ? 'Gratis' : `$${event.price}`}
+                  {event.price === 0 ? 'Gratis' : `AUD $${(event.price || 0).toLocaleString()}`}
                 </div>
               </div>
             </Link>

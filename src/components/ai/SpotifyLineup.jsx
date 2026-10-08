@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { searchArtist, analyzeLineupStyle } from '../../lib/ai/spotify'
 import { getTopTracks as getDeezerTracks, findArtist as findDeezerArtist, searchTracksByArtist } from '../../lib/ai/deezer'
 import { useAuth } from '../../context/AuthContext'
@@ -7,14 +7,20 @@ import { FiMusic, FiExternalLink, FiPlay, FiPause, FiStar } from 'react-icons/fi
 import './AIComponents.css'
 
 const SpotifyLineup = ({ lineup }) => {
-  const { currentUser } = useAuth()
+  const { currentUser, userProfile } = useAuth()
+  // Only ravers (not organizers) can save favourite artists — it feeds their
+  // Pre-Rave Brief and recommendations, which an organizer account doesn't have.
+  const isRaver = !!currentUser && userProfile?.role !== 'organizer'
   const [artists, setArtists] = useState([])
   const [styleProfile, setStyleProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [playingTrack, setPlayingTrack] = useState(null)
-  const [audio, setAudio] = useState(null)
   const [expanded, setExpanded] = useState(false)
   const [saved, setSaved] = useState([])
+  // Hold the active audio in a ref so the unmount cleanup always sees the
+  // CURRENT audio element and can stop it (fixes "music keeps playing after
+  // navigating back").
+  const audioRef = useRef(null)
 
   useEffect(() => {
     if (!lineup || lineup.length === 0) {
@@ -68,20 +74,29 @@ const SpotifyLineup = ({ lineup }) => {
       }
     }
     load()
-
-    return () => { if (audio) { audio.pause(); audio.src = '' } }
   }, [lineup])
 
-  // Load the user's saved artists so the ⭐ reflects their real state
+  // Stop any playing preview when the component unmounts (navigating away).
   useEffect(() => {
-    if (!currentUser) { setSaved([]); return }
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause()
+        audioRef.current.src = ''
+        audioRef.current = null
+      }
+    }
+  }, [])
+
+  // Load the user's saved artists so the ⭐ reflects their real state (ravers only)
+  useEffect(() => {
+    if (!isRaver) { setSaved([]); return }
     getSavedArtists(currentUser.id).then(setSaved)
-  }, [currentUser])
+  }, [isRaver, currentUser])
 
   const isSaved = (name) => saved.some((a) => a.toLowerCase() === name.toLowerCase())
 
   const toggleSave = async (name) => {
-    if (!currentUser || !name) return
+    if (!isRaver || !name) return
     const next = await toggleSavedArtist(currentUser.id, name)
     setSaved(next)
   }
@@ -89,18 +104,20 @@ const SpotifyLineup = ({ lineup }) => {
   const playPreview = (track) => {
     if (!track.previewUrl) return
 
+    // Toggle off if the same track is playing.
     if (playingTrack === track.id) {
-      audio?.pause()
+      audioRef.current?.pause()
       setPlayingTrack(null)
       return
     }
 
-    if (audio) { audio.pause(); audio.src = '' }
+    // Stop whatever was playing before starting the new track.
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current.src = '' }
     const a = new Audio(track.previewUrl)
     a.volume = 0.5
     a.play()
     a.onended = () => setPlayingTrack(null)
-    setAudio(a)
+    audioRef.current = a
     setPlayingTrack(track.id)
   }
 
@@ -147,7 +164,7 @@ const SpotifyLineup = ({ lineup }) => {
                 <h4>{artist.name}</h4>
                 <span className="ai-artist-genres">{artist.genres.slice(0, 2).join(', ')}</span>
               </div>
-              {currentUser && (
+              {isRaver && (
                 <button
                   type="button"
                   className={`ai-save-artist ${isSaved(artist.name) ? 'is-saved' : ''}`}

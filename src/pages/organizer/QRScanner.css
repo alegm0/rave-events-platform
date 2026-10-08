@@ -84,7 +84,9 @@
 .scanner-result.error { background: rgba(255,61,0,0.95); }
 .scanner-result-icon { margin-bottom: 1rem; color: #fff; }
 .scanner-result h2 { font-size: 1.5rem; color: #fff; margin-bottom: 0.5rem; letter-spacing: 0.05em; }
-.scanner-result p { color: rgba(255,255,255,0.8); font-size: 0.9rem; }
+.scanner-result p { color: rgba(255,255,255,0.85); font-size: 0.9rem; }
+.scanner-result-name { font-size: 1.15rem !important; font-weight: 800; color: #fff !important; margin-bottom: 0.25rem; }
+.scanner-result-sub { font-size: 0.75rem !important; color: rgba(255,255,255,0.65) !important; margin-top: 0.35rem; }
 @keyframes resultPop { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
 
 /* Sidebar */

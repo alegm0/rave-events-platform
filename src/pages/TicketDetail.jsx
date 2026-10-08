@@ -31,12 +31,16 @@ const TicketDetail = () => {
   }, [id])
 
   const handleCancel = async () => {
-    const success = await cancelTicket(id)
-    if (success) {
+    const result = await cancelTicket(id)
+    if (result === true) {
       toast.success('Ticket cancelado y reembolsado')
       navigate('/my-tickets')
     } else {
-      toast.error('No se puede cancelar un ticket ya usado')
+      const msg = result === 'used' ? 'No se puede cancelar un ticket ya validado en la puerta'
+        : result === 'ended' ? 'No se puede cancelar: el evento ya finalizó'
+        : 'No se pudo cancelar el ticket'
+      toast.error(msg)
+      setShowCancel(false)
     }
   }
 

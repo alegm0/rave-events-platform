@@ -15,10 +15,15 @@ export const calculateDynamicPrice = (event, tickets = []) => {
   const remaining = capacity - sold
 
   // ── Demand Velocity ──
-  // Calculate how fast tickets are selling (tickets per day)
+  // Calculate how fast tickets are selling (tickets per day).
+  // Use the event's start datetime (not just the date at UTC midnight) so an
+  // event happening today reads as 0 days away, not 1.
   const now = new Date()
-  const eventDate = new Date(event.date)
-  const daysUntilEvent = Math.max(1, Math.ceil((eventDate - now) / (1000 * 60 * 60 * 24)))
+  const eventDate = new Date(event.time ? `${event.date}T${event.time}` : event.date)
+  // Real days remaining (can be 0 = today, or negative if already started).
+  const daysUntilEventReal = Math.max(0, Math.ceil((eventDate - now) / (1000 * 60 * 60 * 24)))
+  // Safe divisor for velocity math — never below 1 to avoid division by zero.
+  const daysUntilEvent = Math.max(1, daysUntilEventReal)
 
   // Sort tickets by purchase date to analyze velocity
   const sortedTickets = [...tickets].sort((a, b) => new Date(a.purchaseDate) - new Date(b.purchaseDate))
@@ -94,7 +99,7 @@ export const calculateDynamicPrice = (event, tickets = []) => {
     priceTier,
     metrics: {
       capacityPct: Math.round(capacityPct),
-      daysUntilEvent,
+      daysUntilEvent: daysUntilEventReal,
       dailyVelocity: Math.round(dailyVelocity * 10) / 10,
       velocityRatio: Math.round(velocityRatio * 100) / 100,
       remaining,
@@ -106,17 +111,22 @@ export const calculateDynamicPrice = (event, tickets = []) => {
       time: timeMultiplier,
       velocity: velocityMultiplier,
     },
-    recommendation: getRecommendation(priceTier, sellOutProbability, daysUntilEvent, capacityPct),
+    recommendation: getRecommendation(priceTier, sellOutProbability, daysUntilEventReal, capacityPct, sold),
   }
 }
 
-function getRecommendation(tier, sellOutProb, days, capPct) {
+function getRecommendation(tier, sellOutProb, days, capPct, sold = 0) {
   if (tier === 'new') return `Evento recién publicado con ${days} días por delante. Aún no hay suficientes datos de venta: mantén el precio y espera las primeras señales de demanda.`
   if (tier === 'premium') return 'Alta demanda detectada. Considera aumentar el precio — el evento se está agotando rápido.'
   if (tier === 'high-demand') return 'Demanda por encima del promedio. Buen momento para activar la siguiente fase de precios.'
   if (tier === 'early-bird') return 'Las ventas están lentas. Considera una promoción o descuento para impulsar las primeras compras.'
   if (sellOutProb > 80) return 'Probabilidad alta de sold-out. La demanda justifica precio premium.'
-  if (days <= 3 && capPct < 50) return 'Evento en pocos días con baja venta. Urgente: activa promociones o marketing.'
+  // "Urgente por baja venta" solo tiene sentido si el evento ya tuvo tiempo de
+  // vender. Un evento recién publicado (casi sin ventas) no da señal de alarma,
+  // solo es nuevo — evitamos contradecir el badge de precio con un mensaje
+  // alarmista sin datos.
+  if (days <= 3 && capPct < 50 && sold > 1) return 'Evento en pocos días con baja venta. Urgente: activa promociones o marketing.'
+  if (sold <= 1) return 'Evento recién publicado. Aún no hay suficientes ventas para una recomendación: observa la demanda inicial.'
   return 'Ventas estables. Mantén el precio actual.'
 }
 
@@ -126,7 +136,7 @@ function getRecommendation(tier, sellOutProb, days, capPct) {
  */
 export const forecastDemand = (event, tickets = []) => {
   const now = new Date()
-  const eventDate = new Date(event.date)
+  const eventDate = new Date(event.time ? `${event.date}T${event.time}` : event.date)
   const capacity = event.capacity || 200
 
   // Group sales by day
@@ -149,7 +159,8 @@ export const forecastDemand = (event, tickets = []) => {
 
   // Project forward
   const cap = capacity || 1 // never divide by zero
-  const daysUntilEvent = Math.max(1, Math.ceil((eventDate - now) / (1000 * 60 * 60 * 24)))
+  const daysUntilEventReal = Math.max(0, Math.ceil((eventDate - now) / (1000 * 60 * 60 * 24)))
+  const daysUntilEvent = Math.max(1, daysUntilEventReal) // safe divisor
   const projectedAdditionalSales = Math.round(trend * daysUntilEvent)
   const projectedTotal = Math.min(cap, tickets.length + projectedAdditionalSales)
   const projectedPct = Math.round((projectedTotal / cap) * 100)
@@ -177,7 +188,7 @@ export const forecastDemand = (event, tickets = []) => {
     trend: Math.round(trend * 10) / 10, // tickets per day
     projectedTotal,
     projectedPct,
-    daysUntilEvent,
+    daysUntilEvent: daysUntilEventReal,
     confidence,
     forecast,
     willSellOut: projectedTotal >= cap * 0.95,

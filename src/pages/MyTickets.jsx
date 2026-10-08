@@ -15,7 +15,9 @@ const MyTickets = () => {
   useEffect(() => {
     if (!currentUser) return
     const loadTickets = async () => {
-      const raw = await getTicketsByUser(currentUser.id)
+      // Always read fresh so a check-in done at the door (by the organizer) is
+      // reflected here without waiting for the short cache to expire.
+      const raw = await getTicketsByUser(currentUser.id, { fresh: true })
       const enriched = []
       for (const t of raw) {
         const event = await getEvent(t.eventId)
@@ -27,9 +29,26 @@ const MyTickets = () => {
     loadTickets()
   }, [currentUser])
 
-  const valid = tickets.filter(t => t.status === 'valid')
-  const used = tickets.filter(t => t.status === 'used')
-  const filtered = filter === 'all' ? tickets : filter === 'valid' ? valid : used
+  // Event finished? (start + duration in the past). Matches TicketDetail.
+  const hasEnded = (ev) => {
+    if (!ev?.date) return false
+    const [h, m] = (ev.time || '23:00').split(':').map((n) => parseInt(n, 10) || 0)
+    const start = new Date(`${ev.date}T00:00:00`)
+    start.setHours(h, m, 0, 0)
+    return new Date(start.getTime() + (ev.duration || 6) * 3600000) < new Date()
+  }
+
+  // Three real buckets:
+  //  - upcoming: valid ticket, event hasn't ended → still "próximo"
+  //  - attended: scanned at the door (status used)
+  //  - past: valid ticket but the event already ended (didn't attend / wasn't scanned)
+  const upcoming = tickets.filter(t => t.status === 'valid' && !hasEnded(t.event))
+  const attended = tickets.filter(t => t.status === 'used')
+  const past = tickets.filter(t => t.status === 'valid' && hasEnded(t.event))
+  const filtered = filter === 'all' ? tickets
+    : filter === 'valid' ? upcoming
+    : filter === 'used' ? attended
+    : past
 
   if (loading) return <div className="mt-page"><div className="container"><div className="loader"></div></div></div>
 
@@ -48,8 +67,9 @@ const MyTickets = () => {
           <div className="mt-filters">
             {[
               { key: 'all', label: `Todos (${tickets.length})` },
-              { key: 'valid', label: `Próximos (${valid.length})` },
-              { key: 'used', label: `Asistidos (${used.length})` },
+              { key: 'valid', label: `Próximos (${upcoming.length})` },
+              { key: 'used', label: `Asistidos (${attended.length})` },
+              ...(past.length > 0 ? [{ key: 'past', label: `Pasados (${past.length})` }] : []),
             ].map(f => (
               <button key={f.key} className={`mt-filter ${filter === f.key ? 'active' : ''}`}
                 onClick={() => setFilter(f.key)}>{f.label}</button>
@@ -99,7 +119,7 @@ const MyTickets = () => {
           </div>
         ) : tickets.length > 0 ? (
           <div className="mt-empty">
-            <p>No hay tickets {filter === 'valid' ? 'próximos' : 'asistidos'}</p>
+            <p>No hay tickets {filter === 'valid' ? 'próximos' : filter === 'used' ? 'asistidos' : 'pasados'}</p>
             <button className="mt-filter active" onClick={() => setFilter('all')}>Ver todos</button>
           </div>
         ) : (

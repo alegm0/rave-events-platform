@@ -48,6 +48,16 @@ const Dashboard = () => {
     start.setHours(h, m, 0, 0)
     return new Date(start.getTime() + (e.duration || 6) * 3600000) < new Date()
   }
+  // Scanner only makes sense within the check-in window (2h before → end).
+  const canScan = (e) => {
+    if (!e?.date) return false
+    const [h, m] = (e.time || '23:00').split(':').map((n) => parseInt(n, 10) || 0)
+    const start = new Date(`${e.date}T00:00:00`)
+    start.setHours(h, m, 0, 0)
+    const now = new Date()
+    const end = new Date(start.getTime() + (e.duration || 6) * 3600000)
+    return now >= new Date(start.getTime() - 2 * 60 * 60 * 1000) && now <= end
+  }
 
   // Featured event: prefer an UPCOMING event (best-selling of the ones still to
   // come). Only fall back to a past event if the organizer has no upcoming ones.
@@ -281,7 +291,7 @@ const Dashboard = () => {
                     <Link to={`/organizer/event/${topEvent.id}/analytics`}><Button variant="ghost" size="sm" icon={<FiBarChart2 />}>Analytics</Button></Link>
                     {/* Live & Scanner only make sense before the event ends */}
                     {!topEventEnded && <Link to={`/organizer/event/${topEvent.id}/live`}><Button variant="ghost" size="sm" icon={<FiActivity />}>En vivo</Button></Link>}
-                    {!topEventEnded && <Link to={`/organizer/scanner/${topEvent.id}`}><Button size="sm" icon={<FiCrosshair />}>Scanner</Button></Link>}
+                    {canScan(topEvent) && <Link to={`/organizer/scanner/${topEvent.id}`}><Button size="sm" icon={<FiCrosshair />}>Scanner</Button></Link>}
                   </div>
                 </div>
               </div>

@@ -73,6 +73,8 @@ const EventDetail = () => {
 
   const handlePurchase = () => {
     if (!currentUser) { navigate('/login'); return }
+    // Defence in depth: never open checkout for an event that already finished.
+    if (eventEnded) { toast.error('Este evento ya finalizó'); return }
     setShowConfirm(true)
   }
 
@@ -133,6 +135,9 @@ const EventDetail = () => {
     const end = new Date(start.getTime() + (event.duration || 6) * 3600000)
     return end
   })()
+  // An event can only be reviewed once it has actually finished — having a
+  // ticket for an upcoming or in-progress event does not mean you attended.
+  const eventEnded = endTime ? endTime < new Date() : false
 
   return (
     <div className="ed-page">
@@ -335,8 +340,8 @@ const EventDetail = () => {
             <div className="ed-section">
               <h2 className="ed-section-title">⭐ Reviews {avgRating > 0 && `(${avgRating}/5)`}</h2>
               {/* Only attendees (people who had a ticket) can rate the event, and
-                  only once. If you didn't go, you can't review it. */}
-              {currentUser && !isOrg && alreadyOwned && !reviews.find(r => r.userId === currentUser.id) && (
+                  only once, and only after the event has actually finished. */}
+              {currentUser && !isOrg && alreadyOwned && eventEnded && !reviews.find(r => r.userId === currentUser.id) && (
                 <div style={{ background: '#141414', padding: '1.25rem', marginBottom: '1rem', border: '1px solid rgba(255,255,255,0.06)' }}>
                   <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.8rem', marginBottom: '0.75rem' }}>Fuiste a este evento. ¿Cómo estuvo?</p>
                   <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
@@ -358,10 +363,12 @@ const EventDetail = () => {
                   </div>
                 </div>
               )}
-              {/* Logged-in user who didn't attend: explain why they can't review */}
-              {currentUser && !isOrg && !alreadyOwned && !reviews.find(r => r.userId === currentUser.id) && (
+              {/* Explain why the review form isn't available yet. */}
+              {currentUser && !isOrg && !reviews.find(r => r.userId === currentUser.id) && !(alreadyOwned && eventEnded) && (
                 <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.8rem', marginBottom: '1rem' }}>
-                  Solo quienes asistieron pueden dejar una review de este evento.
+                  {alreadyOwned && !eventEnded
+                    ? 'Podrás dejar tu review cuando el evento termine.'
+                    : 'Solo quienes asistieron pueden dejar una review de este evento.'}
                 </p>
               )}
               {reviews.length > 0 ? (
@@ -443,6 +450,23 @@ const EventDetail = () => {
                 <Button fullWidth size="lg" disabled>
                   {isEventOwner ? 'Es tu evento' : 'Solo los ravers compran tickets'}
                 </Button>
+              ) : eventEnded ? (
+                /* A finished event can't be bought anymore — the show is over.
+                   Owning a ticket still shows the "ver mis tickets" state below
+                   is handled by the alreadyOwned branch, which comes first for
+                   past events the user attended. */
+                alreadyOwned ? (
+                  <div className="ed-purchased">
+                    <FiCheck size={24} />
+                    <div>
+                      <strong>Asististe a este evento</strong>
+                      <p>Tu entrada queda en "Mis Tickets"</p>
+                    </div>
+                    <Link to="/my-tickets"><Button fullWidth variant="ghost">Ver mis tickets</Button></Link>
+                  </div>
+                ) : (
+                  <Button fullWidth size="lg" disabled>Evento finalizado</Button>
+                )
               ) : purchased || alreadyOwned ? (
                 <div className="ed-purchased">
                   <FiCheck size={24} />

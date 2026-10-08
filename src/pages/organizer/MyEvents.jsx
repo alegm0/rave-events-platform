@@ -27,12 +27,36 @@ const MyEvents = () => {
   }, [currentUser])
 
   const now = new Date()
-  const filtered = filter === 'all' ? events
-    : filter === 'upcoming' ? events.filter(e => new Date(e.date) >= now)
-    : events.filter(e => new Date(e.date) < now)
+  // An event is "past" only once its full window (start + duration) has elapsed
+  // — not at midnight of the event day. This matches the QR scanner's rule, so a
+  // same-day event in progress still shows Scanner / Editar / En vivo.
+  const hasEnded = (e) => {
+    if (!e?.date) return false
+    const [h, m] = (e.time || '23:00').split(':').map((n) => parseInt(n, 10) || 0)
+    const start = new Date(`${e.date}T00:00:00`)
+    start.setHours(h, m, 0, 0)
+    const end = new Date(start.getTime() + (e.duration || 6) * 3600000)
+    return end < now
+  }
 
-  const upcoming = events.filter(e => new Date(e.date) >= now).length
-  const past = events.filter(e => new Date(e.date) < now).length
+  // The scanner's check-in window: from 2h before start until the event ends.
+  // Only within this window does the Scanner button make sense (door is open).
+  const canScan = (e) => {
+    if (!e?.date) return false
+    const [h, m] = (e.time || '23:00').split(':').map((n) => parseInt(n, 10) || 0)
+    const start = new Date(`${e.date}T00:00:00`)
+    start.setHours(h, m, 0, 0)
+    const end = new Date(start.getTime() + (e.duration || 6) * 3600000)
+    const doorOpen = new Date(start.getTime() - 2 * 60 * 60 * 1000)
+    return now >= doorOpen && now <= end
+  }
+
+  const filtered = filter === 'all' ? events
+    : filter === 'upcoming' ? events.filter(e => !hasEnded(e))
+    : events.filter(e => hasEnded(e))
+
+  const upcoming = events.filter(e => !hasEnded(e)).length
+  const past = events.filter(e => hasEnded(e)).length
 
   return (
     <div className="dash-page">
@@ -61,7 +85,7 @@ const MyEvents = () => {
         {filtered.length > 0 ? (
           <div className="me-grid">
             {filtered.map(e => {
-              const isPast = new Date(e.date) < now
+              const isPast = hasEnded(e)
               return (
                 <div key={e.id} className={`me-card ${isPast ? 'me-card--past' : ''}`}>
                   <div className="me-card-img">
@@ -103,7 +127,8 @@ const MyEvents = () => {
                       <Link to={`/event/${e.id}`} target="_blank" rel="noopener noreferrer"><Button variant="ghost" size="sm" icon={<FiEye />}>Ver como raver</Button></Link>
                       {!isPast && <Link to={`/organizer/edit-event/${e.id}`}><Button variant="ghost" size="sm" icon={<FiEdit />}>Editar</Button></Link>}
                       {!isPast && <Link to={`/organizer/event/${e.id}/live`}><Button variant="ghost" size="sm" icon={<FiActivity />}>En vivo</Button></Link>}
-                      {!isPast && <Link to={`/organizer/scanner/${e.id}`}><Button size="sm" icon={<FiCrosshair />}>Scanner</Button></Link>}
+                      {/* Scanner only the day of the event (door open) — not for future events */}
+                      {canScan(e) && <Link to={`/organizer/scanner/${e.id}`}><Button size="sm" icon={<FiCrosshair />}>Scanner</Button></Link>}
                     </div>
                   </div>
                 </div>

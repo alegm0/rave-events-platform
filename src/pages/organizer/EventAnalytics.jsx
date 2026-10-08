@@ -85,6 +85,16 @@ const EventAnalytics = () => {
     const end = new Date(start.getTime() + (event.duration || 6) * 3600000)
     return end < new Date()
   })()
+  // Scanner only within the check-in window (2h before start → end).
+  const canScan = (() => {
+    if (!event?.date) return false
+    const [h, m] = (event.time || '23:00').split(':').map((n) => parseInt(n, 10) || 0)
+    const start = new Date(`${event.date}T00:00:00`)
+    start.setHours(h, m, 0, 0)
+    const now = new Date()
+    const end = new Date(start.getTime() + (event.duration || 6) * 3600000)
+    return now >= new Date(start.getTime() - 2 * 60 * 60 * 1000) && now <= end
+  })()
 
   return (
     <div className="dash-page">
@@ -98,7 +108,7 @@ const EventAnalytics = () => {
             {/* Edit/live/scanner only make sense before the event is over */}
             {!eventEnded && <Link to={`/organizer/edit-event/${id}`}><Button variant="ghost" icon={<FiEdit />}>Editar</Button></Link>}
             {!eventEnded && <Link to={`/organizer/event/${id}/live`}><Button variant="ghost" icon={<FiActivity />}>En vivo</Button></Link>}
-            {!eventEnded && <Link to={`/organizer/scanner/${id}`}><Button icon={<FiCrosshair />}>Scanner</Button></Link>}
+            {canScan && <Link to={`/organizer/scanner/${id}`}><Button icon={<FiCrosshair />}>Scanner</Button></Link>}
             <Button variant="ghost" onClick={() => setShowDelete(true)} icon={<FiTrash2 />} className="btn-danger-ghost">Eliminar</Button>
           </div>
         </div>

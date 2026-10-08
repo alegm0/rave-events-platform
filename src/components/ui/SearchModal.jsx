@@ -43,7 +43,8 @@ const SearchModal = ({ isOpen, onClose }) => {
 
         {query.length >= 2 && (
           <div className="search-results">
-            {results.events.length > 0 && (
+            {loading && <div className="search-empty">Buscando…</div>}
+            {!loading && results.events.length > 0 && (
               <div className="search-group">
                 <h4>Eventos ({results.events.length})</h4>
                 {results.events.slice(0, 6).map(e => (
@@ -53,12 +54,12 @@ const SearchModal = ({ isOpen, onClose }) => {
                       <strong>{e.title}</strong>
                       <span><FiCalendar /> {new Date(e.date).toLocaleDateString('es', { day: 'numeric', month: 'short' })} · <FiMapPin /> {e.location}</span>
                     </div>
-                    <span className="search-result-price">{e.price === 0 ? 'Gratis' : `$${e.price}`}</span>
+                    <span className="search-result-price">{e.price === 0 ? 'Gratis' : `AUD $${(e.price || 0).toLocaleString()}`}</span>
                   </Link>
                 ))}
               </div>
             )}
-            {results.organizers.length > 0 && (
+            {!loading && results.organizers.length > 0 && (
               <div className="search-group">
                 <h4>Organizadores ({results.organizers.length})</h4>
                 {results.organizers.map(o => (
@@ -74,7 +75,7 @@ const SearchModal = ({ isOpen, onClose }) => {
                 ))}
               </div>
             )}
-            {!hasResults && <div className="search-empty">No se encontraron resultados para "{query}"</div>}
+            {!loading && !hasResults && <div className="search-empty">No se encontraron resultados para "{query}"</div>}
           </div>
         )}
 

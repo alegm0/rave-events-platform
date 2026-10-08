@@ -47,6 +47,18 @@ async function run() {
   const org = usersSnap.docs[0].data()
   const organizerId = org.id || usersSnap.docs[0].id
 
+  // Remove any previous LIVE TEST event (and its tickets) so we don't pile up
+  // duplicates or leave a finished one lying around.
+  const prevSnap = await db.collection('events').where('title', '==', 'LIVE TEST — Scanner Demo').get()
+  for (const prev of prevSnap.docs) {
+    const prevTix = await db.collection('tickets').where('eventId', '==', prev.data().id).get()
+    const delBatch = db.batch()
+    prevTix.docs.forEach((t) => delBatch.delete(t.ref))
+    delBatch.delete(prev.ref)
+    await delBatch.commit()
+    console.log(`  (limpiado LIVE TEST previo: ${prevTix.size} tickets)`)
+  }
+
   // Start 1 hour ago, 6-hour run → currently live.
   const now = new Date()
   const start = new Date(now.getTime() - 60 * 60 * 1000)

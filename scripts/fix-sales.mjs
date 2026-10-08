@@ -54,7 +54,11 @@ const run = async () => {
 
   for (const docSnap of eventsSnap.docs) {
     const e = docSnap.data()
-    if (e.status !== 'active' || e.id === 'ev-live') continue
+    // Skip the always-live seed event and any manual scanner-test event — those
+    // must keep ONLY the real tickets the user bought/scanned, not inflated demo
+    // sales.
+    const isScannerTest = /live test|scanner demo/i.test(e.title || '')
+    if (e.status !== 'active' || e.id === 'ev-live' || isScannerTest) continue
 
     const past = new Date(`${e.date}T00:00:00`) < now
     const daysAway = Math.ceil((new Date(e.date) - now) / 86400000)
@@ -87,10 +91,27 @@ const run = async () => {
     if (existing.length < target) {
       const available = ravers.filter((r) => !buyersWithTicket.has(r.id))
       const toAdd = sample(available, target - existing.length)
-      const tier = e.pricingMode === 'tiers' && e.tiers?.length ? e.tiers[0] : null
+      const tiered = e.pricingMode === 'tiers' && e.tiers?.length
+      // Assign each new ticket to the correct phase IN ORDER: fill phase 1 up to
+      // its qty, then phase 2, etc. (unlimited qty = 0/empty absorbs the rest).
+      // Start the cursor at how many tickets already exist so we don't double-fill.
+      let soldSoFar = existing.length
+      const resolveTier = (index) => {
+        if (!tiered) return null
+        let acc = 0
+        for (const t of e.tiers) {
+          const qty = parseInt(t.qty) || 0
+          if (qty === 0) return t // unlimited phase absorbs everyone from here
+          acc += qty
+          if (index < acc) return t
+        }
+        return e.tiers[e.tiers.length - 1] // past all caps → last phase
+      }
       for (const person of toAdd) {
         const tid = genId()
         const used = past ? Math.random() < 0.82 : false
+        const tier = resolveTier(soldSoFar)
+        soldSoFar++
         batch.set(db.collection('tickets').doc(tid), {
           id: tid, eventId: e.id, userId: person.id,
           tierName: tier?.name || null,
@@ -120,26 +141,49 @@ const run = async () => {
     // Re-spread purchase dates of ALL this event's tickets (existing ones from
     // earlier enrichment shared the same timestamp → false fraud spike). Give
     // each a unique minute within the 60 days before the event.
+    // ALSO re-assign phase + price to EVERY ticket in order, so pre-existing
+    // tickets that were created with the old (buggy) "all phase 1" logic get
+    // corrected and the per-phase counters match the ticket documents.
+    const tiersArr = (e.pricingMode === 'tiers' && Array.isArray(e.tiers) && e.tiers.length) ? e.tiers : null
+    const phaseFor = (index) => {
+      if (!tiersArr) return null
+      let acc = 0
+      for (let i = 0; i < tiersArr.length; i++) {
+        const t = tiersArr[i]
+        const qty = parseInt(t.qty) || 0
+        const isLast = i === tiersArr.length - 1
+        if (qty === 0 || isLast) return t
+        acc += qty
+        if (index < acc) return t
+      }
+      return tiersArr[tiersArr.length - 1]
+    }
     const spreadBatch = db.batch()
-    evTicketsSnap.docs.forEach((d) => {
+    evTicketsSnap.docs.forEach((d, idx) => {
       const minsBack = randInt(1, 60 * 24 * 60)
-      spreadBatch.update(d.ref, { purchaseDate: new Date(now.getTime() - minsBack * 60000).toISOString() })
+      const patch = { purchaseDate: new Date(now.getTime() - minsBack * 60000).toISOString() }
+      const t = phaseFor(idx)
+      if (t) { patch.tierName = t.name; patch.pricePaid = parseFloat(t.price) }
+      else { patch.tierName = null; patch.pricePaid = e.price }
+      spreadBatch.update(d.ref, patch)
     })
     await spreadBatch.commit()
 
     const updates = { capacity, ticketsSold: realCount }
 
-    // Tier distribution if phased
+    // Tier distribution if phased — MUST match how tickets were assigned above
+    // (fill each phase to its qty in order; qty 0 = unlimited absorbs the rest).
     if (e.pricingMode === 'tiers' && Array.isArray(e.tiers) && e.tiers.length) {
       const tierSold = {}
       let remaining = realCount
-      for (const t of e.tiers) {
-        const qty = parseInt(t.qty) || Math.ceil(capacity / e.tiers.length)
-        const inThis = Math.min(qty, remaining)
-        tierSold[t.name] = inThis
+      e.tiers.forEach((t, i) => {
+        const qty = parseInt(t.qty) || 0
+        const isLast = i === e.tiers.length - 1
+        // Unlimited phase (qty 0) or the last phase takes whatever is left.
+        const inThis = (qty === 0 || isLast) ? remaining : Math.min(qty, remaining)
+        tierSold[t.name] = Math.max(0, inThis)
         remaining -= inThis
-        if (remaining <= 0) break
-      }
+      })
       updates.tierSold = tierSold
     }
 

@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getEvent, getComfortProfile } from '../lib/db'
+import { getEvent, getComfortProfile, getTicketsByUser } from '../lib/db'
 import { useAuth } from '../context/AuthContext'
 import { buildTimeline, getNowNext, minutesUntil, formatTime } from '../lib/timetable'
 import { findServices, resolveDestination } from '../lib/venue'
 import FloorPlanMap from '../components/venue/FloorPlanMap'
 import { warehouseAnchors } from '../components/venue/floorplans/warehouse'
 import { FiX, FiDroplet, FiLogOut, FiChevronLeft, FiArrowRight } from 'react-icons/fi'
-import { MdWc, MdChair, MdLocalHospital, MdMusicNote, MdVolumeOff, MdSmokingRooms } from 'react-icons/md'
+import { MdWc, MdChair, MdLocalHospital, MdVolumeOff, MdSmokingRooms } from 'react-icons/md'
 import './RaveMode.css'
 
 // Rave Mode: a context switch, not a menu.
@@ -32,10 +32,21 @@ const RaveMode = () => {
   const [comfort, setComfort] = useState({})
   const [now, setNow] = useState(new Date())
   const [panel, setPanel] = useState(null) // { title, destination, note, walkMin }
+  // Access gate: Rave Mode is the attendee's in-event view, so it requires a
+  // ticket for THIS event. null = checking, true/false = resolved.
+  const [hasAccess, setHasAccess] = useState(null)
 
   useEffect(() => {
     getEvent(id).then(setEvent)
     if (currentUser) getComfortProfile(currentUser.id).then((p) => setComfort(p || {}))
+  }, [id, currentUser])
+
+  // Verify the user owns a ticket for this event before showing Rave Mode.
+  useEffect(() => {
+    if (!currentUser) { setHasAccess(false); return }
+    getTicketsByUser(currentUser.id)
+      .then((tickets) => setHasAccess(tickets.some((t) => t.eventId === id)))
+      .catch(() => setHasAccess(false))
   }, [id, currentUser])
 
   useEffect(() => {
@@ -43,7 +54,23 @@ const RaveMode = () => {
     return () => clearInterval(t)
   }, [])
 
-  if (!event) return <div className="rm rm--loading">Cargando…</div>
+  if (!event || hasAccess === null) return <div className="rm rm--loading">Cargando…</div>
+
+  // No ticket for this event → Rave Mode is not available. Send them to the
+  // event page where they can buy, with a clear reason.
+  if (!hasAccess) {
+    return (
+      <div className="rm rm--loading" style={{ flexDirection: 'column', gap: '1rem', textAlign: 'center', padding: '2rem' }}>
+        <h1 style={{ fontSize: '1.3rem', color: '#fff' }}>Rave Mode es para asistentes</h1>
+        <p style={{ color: 'rgba(255,255,255,0.6)', maxWidth: '320px' }}>
+          Necesitas una entrada para este evento para usar la vista en vivo del venue.
+        </p>
+        <button className="rm-back" onClick={() => navigate(`/event/${id}`)}>
+          <FiChevronLeft /> Ver el evento
+        </button>
+      </div>
+    )
+  }
 
   const timeline = buildTimeline(event)
   const { current, next } = getNowNext(timeline, now)

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { COMFORT_PREFERENCES, getComfortProfile, updateComfortProfile } from '../../lib/db'
-import { FiMoon, FiCompass, FiCheck } from 'react-icons/fi'
+import { FiMoon, FiCheck } from 'react-icons/fi'
 import { MdAccessible, MdWc, MdChair, MdShortText } from 'react-icons/md'
 import './ComfortProfile.css'
 
@@ -11,7 +11,6 @@ const ICONS = {
   moon: <FiMoon />,
   accessible: <MdAccessible />,
   toilet: <MdWc />,
-  compass: <FiCompass />,
   seat: <MdChair />,
   text: <MdShortText />,
 }
@@ -47,7 +46,6 @@ const ComfortProfile = ({ compact = false }) => {
   //  - "presentation" ones change HOW info is shown (simpler plan, less text)
   const HIGHLIGHT_KEYS = ['quieterAreas', 'stepFree', 'accessibleToilets', 'restAreas']
   const highlightOn = HIGHLIGHT_KEYS.filter((k) => prefs[k]).length
-  const simpleOn = !!prefs.simpleNavigation
   const minimalOn = !!prefs.minimalText
 
   // Build a precise summary of what each active preference actually does.
@@ -55,7 +53,6 @@ const ComfortProfile = ({ compact = false }) => {
   if (highlightOn > 0) {
     effects.push(`resaltará ${highlightOn === 1 ? 'esta zona o servicio' : `estas ${highlightOn} zonas y servicios`} en el mapa del venue y en tu plan`)
   }
-  if (simpleOn) effects.push('simplificará tu plan del venue a lo esencial (entrada, escenario, baño y salida)')
   if (minimalOn) effects.push('mostrará el briefing del evento con menos texto')
 
   if (loading) return null

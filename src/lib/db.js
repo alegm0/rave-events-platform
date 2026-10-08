@@ -82,7 +82,6 @@ export const COMFORT_PREFERENCES = [
   { key: 'quieterAreas', label: 'Prefiero zonas más tranquilas', icon: 'moon' },
   { key: 'stepFree', label: 'Necesito rutas sin escalones', icon: 'accessible' },
   { key: 'accessibleToilets', label: 'Los baños accesibles son importantes', icon: 'toilet' },
-  { key: 'simpleNavigation', label: 'Prefiero navegación sencilla', icon: 'compass' },
   { key: 'restAreas', label: 'Puedo necesitar un lugar para sentarme', icon: 'seat' },
   { key: 'minimalText', label: 'Muéstrame lo esencial con poco texto', icon: 'text' },
 ]
@@ -322,15 +321,27 @@ export const getTicket = async (id) => {
   return await getDocument('tickets', id)
 }
 
+// Returns true on success, or a reason string on refusal, so the UI can show a
+// precise message. A ticket can't be cancelled if it was already used (scanned)
+// or if its event has already finished (there's nothing left to cancel).
 export const cancelTicket = async (ticketId) => {
   const ticket = await getDocument('tickets', ticketId)
-  if (!ticket) return false
-  if (ticket.status === 'used') return false
+  if (!ticket) return 'not-found'
+  if (ticket.status === 'used') return 'used'
+
+  const event = await getEvent(ticket.eventId)
+  // Block cancelling a ticket for an event that has already ended.
+  if (event?.date) {
+    const [h, m] = (event.time || '23:00').split(':').map((n) => parseInt(n, 10) || 0)
+    const start = new Date(`${event.date}T00:00:00`)
+    start.setHours(h, m, 0, 0)
+    const end = new Date(start.getTime() + (event.duration || 6) * 3600000)
+    if (end < new Date()) return 'ended'
+  }
 
   await deleteDoc(doc(db, 'tickets', ticketId))
 
   // Give the seat back: total counter and, if it was sold in a phase, that phase
-  const event = await getEvent(ticket.eventId)
   if (event) {
     const counters = { ticketsSold: Math.max(0, (event.ticketsSold || 1) - 1) }
     if (ticket.tierName) {
@@ -370,16 +381,28 @@ export const getAverageRating = async (eventId) => {
 }
 
 // ── Search ──
+// Event finished? (start + duration in the past). Local copy of the shared
+// rule to avoid a circular import between db.js and timetable.js.
+const eventHasEnded = (e, now = new Date()) => {
+  if (!e?.date) return false
+  const [h, m] = (e.time || '23:00').split(':').map((n) => parseInt(n, 10) || 0)
+  const start = new Date(`${e.date}T00:00:00`)
+  start.setHours(h, m, 0, 0)
+  return new Date(start.getTime() + (e.duration || 6) * 3600000) < now
+}
+
 export const searchAll = async (queryStr) => {
   const q = queryStr.toLowerCase().trim()
   if (!q) return { events: [], organizers: [] }
   const events = await getEvents()
   const filteredEvents = events.filter(e =>
-    e.title?.toLowerCase().includes(q) ||
-    e.location?.toLowerCase().includes(q) ||
-    e.genre?.toLowerCase().includes(q) ||
-    e.city?.toLowerCase().includes(q) ||
-    (e.lineup || []).some(a => (a.name || a).toLowerCase().includes(q))
+    !eventHasEnded(e) && (
+      e.title?.toLowerCase().includes(q) ||
+      e.location?.toLowerCase().includes(q) ||
+      e.genre?.toLowerCase().includes(q) ||
+      e.city?.toLowerCase().includes(q) ||
+      (e.lineup || []).some(a => (a.name || a).toLowerCase().includes(q))
+    )
   )
   const users = await getCollection('users')
   const organizers = users.filter(u => u.role === 'organizer' && (
@@ -425,14 +448,30 @@ export const validateTicket = async (qrCode, eventId) => {
   const tickets = await getTicketsByEvent(eventId, { fresh: true })
   const ticket = tickets.find(t => t.qrCode === qrCode)
   if (!ticket) return { success: false, message: 'Ticket inválido' }
-  if (ticket.status === 'used') return { success: false, message: 'Ticket ya utilizado' }
+  if (ticket.status === 'used') {
+    // Surface who already used it and when, so the door staff has context.
+    const prevUser = await getUser(ticket.userId)
+    return {
+      success: false,
+      message: 'Ticket ya utilizado',
+      attendee: prevUser?.displayName || null,
+      usedAt: ticket.usedAt || null,
+    }
+  }
 
   await updateDoc(doc(db, 'tickets', ticket.id), {
     status: 'used',
     usedAt: new Date().toISOString()
   })
   invalidateCache('tickets')
-  return { success: true, message: 'Acceso concedido' }
+  // Return the attendee name so the scanner can confirm WHO just entered.
+  const user = await getUser(ticket.userId)
+  return {
+    success: true,
+    message: 'Acceso concedido',
+    attendee: user?.displayName || null,
+    tierName: ticket.tierName || null,
+  }
 }
 
 // ── Notifications ──

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
-import { getComfortProfile, getTicketsByUser, getEvent } from '../../lib/db'
+import { getComfortProfile, getTicketsByUser, getEvent, getSavedArtists } from '../../lib/db'
 import { buildPreRaveBrief } from '../../lib/briefing'
 import { FiStar, FiCheck, FiX, FiInfo, FiHeadphones, FiClock, FiMapPin } from 'react-icons/fi'
 import './PreRaveBrief.css'
@@ -31,7 +31,9 @@ const PreRaveBrief = ({ event, onMeetLineup }) => {
         }
       }
 
-      const savedArtists = currentUser?.savedArtists || []
+      // Read followed artists fresh from the DB (not the login-cached user) so
+      // following/unfollowing in the profile reflects here without re-login.
+      const savedArtists = currentUser ? await getSavedArtists(currentUser.id) : []
       const b = buildPreRaveBrief(event, { comfortProfile, knownArtists, savedArtists })
       if (!cancelled) { setBrief(b); setReady(true) }
     }

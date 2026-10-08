@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { getTicketsByUser, getEventsByOrganizer, getTicketsByEvent, getEvent, sumRevenue } from '../lib/db'
-import { FiUser, FiMail, FiCalendar, FiPlus, FiBarChart2, FiUsers, FiDollarSign, FiLogOut, FiArrowRight } from 'react-icons/fi'
+import { getTicketsByUser, getEventsByOrganizer, getTicketsByEvent, getEvent, sumRevenue, getSavedArtists, toggleSavedArtist } from '../lib/db'
+import { FiUser, FiMail, FiCalendar, FiPlus, FiBarChart2, FiUsers, FiDollarSign, FiLogOut, FiArrowRight, FiStar, FiX } from 'react-icons/fi'
 import Button from '../components/ui/Button'
 import ComfortProfile from '../components/ui/ComfortProfile'
 import './Profile.css'
@@ -17,6 +17,7 @@ const Profile = () => {
   const [userTickets, setUserTickets] = useState([])
   const [ticketEvents, setTicketEvents] = useState({})
   const [eventTicketCounts, setEventTicketCounts] = useState({})
+  const [savedArtists, setSavedArtists] = useState([])
 
   useEffect(() => {
     const load = async () => {
@@ -44,6 +45,7 @@ const Profile = () => {
           evtMap[t.eventId] = await getEvent(t.eventId)
         }
         setTicketEvents(evtMap)
+        setSavedArtists(await getSavedArtists(currentUser.id))
       }
       setLoading(false)
     }
@@ -158,6 +160,7 @@ const Profile = () => {
                   {[
                     { icon: <FiCalendar />, val: userTickets.length, label: 'Tickets comprados', color: '#ff3d00' },
                     { icon: <FiUsers />, val: userTickets.filter(t => t.status === 'used').length, label: 'Eventos asistidos', color: '#4caf50' },
+                    { icon: <FiDollarSign />, val: `AUD $${sumRevenue(userTickets).toLocaleString()}`, label: 'Total gastado', color: '#ff9800' },
                   ].map((s, i) => (
                     <div key={i} className="prof-stat-card">
                       <div className="prof-stat-icon" style={{ color: s.color, background: `${s.color}15` }}>{s.icon}</div>
@@ -186,6 +189,32 @@ const Profile = () => {
                 {/* Comfort & Accessibility Profile */}
                 <div className="prof-section-title">Comodidad y accesibilidad</div>
                 <ComfortProfile />
+
+                {/* Saved artists (⭐ from event line-ups) */}
+                <div className="prof-section-title">Artistas que sigues</div>
+                {savedArtists.length > 0 ? (
+                  <div className="prof-artists">
+                    {savedArtists.map((name) => (
+                      <span key={name} className="prof-artist-chip">
+                        <FiStar /> {name}
+                        <button
+                          type="button"
+                          className="prof-artist-remove"
+                          title="Dejar de seguir"
+                          onClick={async () => {
+                            const next = await toggleSavedArtist(currentUser.id, name)
+                            setSavedArtists(next)
+                          }}>
+                          <FiX />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="prof-empty-hint">
+                    Aún no sigues a ningún artista. Toca la ⭐ junto a un DJ en el line-up de cualquier evento para seguirlo; aparecerán aquí y en tu Pre-Rave Brief.
+                  </p>
+                )}
 
                 {/* Recent tickets */}
                 {userTickets.length > 0 && (

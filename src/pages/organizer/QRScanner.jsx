@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { validateTicket, getEvent, getTicketsByEvent } from '../../lib/db'
 import { useAuth } from '../../context/AuthContext'
-import { FiCheckCircle, FiXCircle, FiCamera, FiType, FiUsers, FiArrowLeft, FiActivity } from 'react-icons/fi'
+import { FiCheckCircle, FiXCircle, FiCamera, FiType, FiUsers, FiArrowLeft, FiActivity, FiClock } from 'react-icons/fi'
 import Button from '../../components/ui/Button'
 import { useToast } from '../../components/ui/Toast'
 import './QRScanner.css'
@@ -136,11 +136,12 @@ const QRScanner = () => {
     await refreshStats()
     setManualCode('')
 
-    if (res.success) toast.success('¡Entrada validada!')
+    if (res.success) toast.success(res.attendee ? `✓ ${res.attendee} validado` : '¡Entrada validada!')
     else toast.error(res.message)
 
-    // Auto-clear result after 3 seconds
-    setTimeout(() => setResult(null), 3000)
+    // Keep the result visible a bit longer so door staff clearly sees the
+    // outcome (success stays up a touch longer since it's the common case).
+    setTimeout(() => setResult(null), res.success ? 4500 : 3500)
   }
 
   const handleManualSubmit = (e) => {
@@ -148,16 +149,50 @@ const QRScanner = () => {
     handleValidate(manualCode)
   }
 
-  // A finished event can't be scanned anymore — the door is closed. Block it
-  // here (not just by hiding the button) so a direct URL can't reopen check-in.
-  const eventEnded = (() => {
-    if (!event?.date) return false
+  // The check-in window: the door only opens around the event. We allow the
+  // scanner from 2h before the start (door prep / early arrivals) until the end.
+  // Outside that window scanning is blocked — not just hidden — so a direct URL
+  // can't validate a future or finished event.
+  const DOOR_LEAD_MS = 2 * 60 * 60 * 1000 // scanner opens 2h before start
+  const { eventEnded, eventNotStarted } = (() => {
+    if (!event?.date) return { eventEnded: false, eventNotStarted: false }
     const [h, m] = (event.time || '23:00').split(':').map((n) => parseInt(n, 10) || 0)
     const start = new Date(`${event.date}T00:00:00`)
     start.setHours(h, m, 0, 0)
     const end = new Date(start.getTime() + (event.duration || 6) * 3600000)
-    return end < new Date()
+    const now = new Date()
+    return {
+      eventEnded: end < now,
+      eventNotStarted: now < new Date(start.getTime() - DOOR_LEAD_MS),
+    }
   })()
+
+  // Future event — the door hasn't opened yet. Block check-in with a clear msg.
+  if (event && eventNotStarted) {
+    const doorDate = (() => {
+      const [h, m] = (event.time || '23:00').split(':').map((n) => parseInt(n, 10) || 0)
+      const start = new Date(`${event.date}T00:00:00`); start.setHours(h, m, 0, 0)
+      return start
+    })()
+    return (
+      <div className="scanner-page">
+        <div className="container" style={{ padding: '4rem 1rem', textAlign: 'center' }}>
+          <FiClock size={48} style={{ color: '#2196f3' }} />
+          <h1 style={{ color: '#fff', marginTop: '1rem' }}>El evento aún no empieza</h1>
+          <p style={{ color: 'rgba(255,255,255,0.5)', marginTop: '0.5rem' }}>
+            La validación de entradas se habilita el día del evento, cerca de la apertura de puertas.
+          </p>
+          <p style={{ color: 'rgba(255,255,255,0.7)', marginTop: '0.75rem', fontSize: '0.9rem' }}>
+            {event.title} · {doorDate.toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long' })} a las {event.time}
+          </p>
+          <div style={{ marginTop: '1.5rem', display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+            <Button variant="ghost" onClick={() => navigate(`/organizer/event/${eventId}/analytics`)}>Ver analytics</Button>
+            <Button onClick={() => navigate('/organizer/dashboard')}>Volver al dashboard</Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   if (event && eventEnded) {
     return (
@@ -285,7 +320,14 @@ const QRScanner = () => {
                   {result.success ? <FiCheckCircle size={56} /> : <FiXCircle size={56} />}
                 </div>
                 <h2>{result.success ? '¡Acceso Concedido!' : 'Acceso Denegado'}</h2>
+                {/* Show WHO entered so the organizer has a concrete confirmation */}
+                {result.attendee && (
+                  <p className="scanner-result-name">{result.success ? '✓ ' : ''}{result.attendee}</p>
+                )}
                 <p>{result.message}</p>
+                {!result.success && result.usedAt && (
+                  <p className="scanner-result-sub">Validado el {new Date(result.usedAt).toLocaleString('es', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
+                )}
               </div>
             )}
           </div>

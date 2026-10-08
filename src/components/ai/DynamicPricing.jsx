@@ -63,8 +63,8 @@ const DynamicPricing = ({ event, tickets }) => {
           <span className="ai-metric-label">Tickets/día</span>
         </div>
         <div className="ai-metric-card">
-          <span className="ai-metric-value">{pricing.metrics.daysUntilEvent}d</span>
-          <span className="ai-metric-label">Hasta el evento</span>
+          <span className="ai-metric-value">{pricing.metrics.daysUntilEvent === 0 ? 'Hoy' : `${pricing.metrics.daysUntilEvent}d`}</span>
+          <span className="ai-metric-label">{pricing.metrics.daysUntilEvent === 0 ? 'Es el día' : 'Hasta el evento'}</span>
         </div>
         <div className="ai-metric-card">
           <span className="ai-metric-value">{pricing.sellOutProbability}%</span>

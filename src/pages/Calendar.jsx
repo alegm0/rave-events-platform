@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { getEvents, getTicketsByUser, getEvent, getEventsByOrganizer } from '../lib/db'
 import { useAuth } from '../context/AuthContext'
+import { hasEventEnded } from '../lib/timetable'
 import { FiChevronLeft, FiChevronRight } from 'react-icons/fi'
 import './Calendar.css'
 
@@ -26,8 +27,13 @@ const Calendar = () => {
         setEvents(await getEventsByOrganizer(currentUser.id))
       } else {
         const tickets = await getTicketsByUser(currentUser.id)
+        // Dedupe by eventId so a raver with two tickets to the same event
+        // doesn't get the same day marked twice.
+        const seen = new Set()
         const myEvents = []
         for (const t of tickets) {
+          if (seen.has(t.eventId)) continue
+          seen.add(t.eventId)
           const ev = await getEvent(t.eventId)
           if (ev) myEvents.push(ev)
         }
@@ -99,7 +105,7 @@ const Calendar = () => {
                   <>
                     <span className="cal-day-num">{day}</span>
                     {dayEvents.map(e => {
-                      const isPast = new Date(e.date) < new Date()
+                      const isPast = hasEventEnded(e)
                       return (
                         <Link key={e.id} to={`/event/${e.id}`} className={`cal-event-dot ${isPast ? 'cal-event-past' : ''}`} title={e.title}>
                           <span className="cal-event-name">{e.title}</span>

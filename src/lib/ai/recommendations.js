@@ -2,6 +2,16 @@
 // Vector similarity search on user behavior profiles
 // Uses cosine similarity — no external APIs, runs entirely client-side ($0)
 
+// Event finished? (start + duration in the past). Shared rule so we never
+// recommend an event that already happened, even if it's "today".
+const hasEnded = (e, now = new Date()) => {
+  if (!e?.date) return false
+  const [h, m] = (e.time || '23:00').split(':').map((n) => parseInt(n, 10) || 0)
+  const start = new Date(`${e.date}T00:00:00`)
+  start.setHours(h, m, 0, 0)
+  return new Date(start.getTime() + (e.duration || 6) * 3600000) < now
+}
+
 /**
  * Build a user preference vector based on their behavior
  * Dimensions: genres, price range, time preference, city preference, social activity
@@ -141,10 +151,10 @@ export const getRecommendations = (userProfile, allEvents, excludeIds = [], limi
 
   const profileVec = profileToVector(userProfile, allGenres)
 
-  // Only recommend future events not already attended
+  // Only recommend events that haven't ended and aren't already attended
   const now = new Date()
   const candidates = allEvents.filter(e =>
-    new Date(e.date) >= now && !excludeIds.includes(e.id)
+    !hasEnded(e, now) && !excludeIds.includes(e.id)
   )
 
   const scored = candidates.map(event => {
@@ -168,8 +178,17 @@ export const getRecommendations = (userProfile, allEvents, excludeIds = [], limi
       reasons.push(`Has ido a ${event.genre}`)
     }
 
+    // Line-up overlap with artists the user follows (⭐) — a strong, specific
+    // signal that differentiates two events of the same genre.
+    const followed = (userProfile.savedArtists || []).map((a) => a.toLowerCase())
+    if (followed.length) {
+      const acts = (event.lineup || []).map((a) => (typeof a === 'string' ? a : a.name)).filter(Boolean)
+      const match = acts.find((a) => followed.includes(a.toLowerCase()))
+      if (match) { bonus += 0.12; reasons.push(`Toca ${match}, que sigues`) }
+    }
+
     // Popularity bonus (selling fast) — a more concrete, useful signal
-    const soldPct = event.ticketsSold / (event.capacity || 200)
+    const soldPct = (event.ticketsSold || 0) / (event.capacity || 200)
     if (soldPct > 0.6) {
       bonus += 0.05
       reasons.push('Se está agotando')
@@ -192,9 +211,20 @@ export const getRecommendations = (userProfile, allEvents, excludeIds = [], limi
 
     if (reasons.length === 0) reasons.push('Basado en tu perfil')
 
-    const finalScore = Math.min(1, similarity + bonus)
+    // Spread the score so cards don't all read 100%. A pure genre match sits
+    // around the mid-80s; the extra bonuses (followed artist, selling fast,
+    // soon) are what push a few standouts toward the top. We scale the raw
+    // (similarity + bonus) into a believable 60-98% band instead of clamping
+    // everything that's "good enough" to a flat 100%.
+    const raw = similarity + bonus
+    const scaled = 0.6 + Math.min(1, raw) * 0.38 // → 60%..98%
+    const finalScore = Math.min(0.98, scaled)
 
-    return { ...event, score: Math.round(finalScore * 100) / 100, reasons }
+    // Keep at most 2 reasons on the card: the genre affinity + the single most
+    // specific differentiator, so same-genre events don't look identical.
+    const trimmedReasons = reasons.slice(0, 2)
+
+    return { ...event, score: Math.round(finalScore * 100) / 100, reasons: trimmedReasons }
   })
 
   return scored.sort((a, b) => b.score - a.score).slice(0, limit)
@@ -208,7 +238,7 @@ export const getSimilarEvents = (event, allEvents, limit = 4) => {
   const targetVec = eventToVector(event, allGenres)
 
   const now = new Date()
-  const candidates = allEvents.filter(e => e.id !== event.id && new Date(e.date) >= now)
+  const candidates = allEvents.filter(e => e.id !== event.id && !hasEnded(e, now))
 
   const scored = candidates.map(e => ({
     ...e,

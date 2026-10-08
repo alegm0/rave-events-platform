@@ -117,3 +117,45 @@
   letter-spacing: 0.08em; text-decoration: none; transition: background 0.2s ease;
 }
 .prof-brand-edit:hover { background: rgba(255,61,0,0.06); }
+
+/* ── Saved artists (favoritos) ── */
+.prof-artists {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+.prof-artist-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.5rem 0.4rem 0.7rem;
+  background: rgba(255, 61, 0, 0.1);
+  border: 1px solid rgba(255, 61, 0, 0.25);
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 600;
+  border-radius: 2px;
+}
+.prof-artist-chip svg { color: #ff3d00; }
+.prof-artist-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  border-radius: 50%;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.prof-artist-remove:hover { background: rgba(255, 61, 0, 0.3); color: #fff; }
+.prof-artist-remove svg { color: inherit; width: 11px; height: 11px; }
+.prof-empty-hint {
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  margin-bottom: 0.5rem;
+}

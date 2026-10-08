@@ -131,7 +131,6 @@ const MyTickets = () => {
                       <span className="mt-ticket-arrow"><FiArrowRight /></span>
                     )}
                   </div>
-                  <div className="mt-ticket-tear"></div>
                 </Link>
               )
             })}

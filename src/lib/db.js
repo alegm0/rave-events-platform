@@ -140,6 +140,31 @@ export const getEvent = async (id) => {
   return await getDocument('events', id)
 }
 
+// All artists that appear across the platform's line-ups, de-duplicated by
+// name, each with the UPCOMING events where they play. Powers the Artists page
+// so a raver can discover and follow acts outside a single event's context.
+export const getAllLineupArtists = async () => {
+  const events = await getEvents()
+  const now = new Date()
+  const byName = new Map() // lowercase name -> { name, events: [] }
+  for (const e of events) {
+    const upcoming = eventHasEnded(e, now) ? false : true
+    for (const a of e.lineup || []) {
+      const name = (typeof a === 'string' ? a : a.name)?.trim()
+      if (!name) continue
+      const key = name.toLowerCase()
+      if (!byName.has(key)) byName.set(key, { name, events: [] })
+      // Only list the artist's upcoming gigs (where you could still go).
+      if (upcoming) byName.get(key).events.push({ id: e.id, title: e.title, date: e.date, location: e.location })
+    }
+  }
+  // Sort: artists with upcoming gigs first, then alphabetical.
+  return [...byName.values()].sort((a, b) => {
+    if ((b.events.length > 0) !== (a.events.length > 0)) return b.events.length - a.events.length
+    return a.name.localeCompare(b.name)
+  })
+}
+
 export const getEventsByOrganizer = async (organizerId) => {
   const events = await getCollection('events')
   return events.filter(e => e.organizerId === organizerId)
@@ -444,7 +469,25 @@ export const getGoingUsers = async (eventId) => {
   return users
 }
 
+// Door check-in window: tickets can only be validated from 2h before the start
+// until the event ends. The scanner UI already enforces this, but we revalidate
+// here so the rule holds even if the UI gate is bypassed.
+const withinCheckInWindow = (e, now = new Date()) => {
+  if (!e?.date) return false
+  const [h, m] = (e.time || '23:00').split(':').map((n) => parseInt(n, 10) || 0)
+  const start = new Date(`${e.date}T00:00:00`)
+  start.setHours(h, m, 0, 0)
+  const end = new Date(start.getTime() + (e.duration || 6) * 3600000)
+  const opens = new Date(start.getTime() - 2 * 60 * 60 * 1000)
+  return now >= opens && now <= end
+}
+
 export const validateTicket = async (qrCode, eventId) => {
+  // Revalidate the operational window server-side (defence in depth).
+  const event = await getEvent(eventId)
+  if (event && !withinCheckInWindow(event)) {
+    return { success: false, message: 'Fuera de la ventana de acceso (abre 2h antes del evento)' }
+  }
   const tickets = await getTicketsByEvent(eventId, { fresh: true })
   const ticket = tickets.find(t => t.qrCode === qrCode)
   if (!ticket) return { success: false, message: 'Ticket inválido' }

@@ -287,16 +287,19 @@ export const askCompanion = (question, { event, venue } = {}) => {
 export const getSuggestedQuestions = (event) => {
   const venue = event?.venue
   const qs = []
+  // Line-up / timing
   if ((event?.lineup || []).some((a) => (typeof a === 'object' ? a.time : false))) qs.push('¿Quién toca ahora?')
   if ((event?.lineup || []).length) qs.push('¿Quiénes tocan?')
-  if (event?.price != null || event?.tiers?.length) qs.push('¿Cuánto cuesta la entrada?')
-  if (event?.time) qs.push('¿A qué hora abren puertas?')
-  if (event?.location) qs.push('¿Dónde queda el venue?')
-  if ((venue?.zones || []).some((z) => z.type === 'stage')) qs.push('¿Cómo llego a mi escenario?')
+  // The practical ones a raver actually asks before/at the event
+  if (findServices(venue, 'water').length) qs.push('¿Dónde hay agua?')
   if (findServices(venue, 'toilet', true).length) qs.push('¿Dónde hay un baño accesible?')
   if (findServices(venue, 'rest').length || (venue?.zones || []).some((z) => z.type === 'quiet'))
     qs.push('Me abruma la gente, ¿dónde puedo descansar?')
-  if (findServices(venue, 'water').length) qs.push('¿Dónde hay agua?')
+  if (findServices(venue, 'smoking').length) qs.push('¿Dónde puedo fumar?')
+  // Logistics
+  if (event?.price != null || event?.tiers?.length) qs.push('¿Cuánto cuesta la entrada?')
+  if (event?.time) qs.push('¿A qué hora abren puertas?')
+  if (event?.location) qs.push('¿Dónde queda el venue?')
   qs.push('¿Qué necesito llevar?')
   return qs.slice(0, 6)
 }

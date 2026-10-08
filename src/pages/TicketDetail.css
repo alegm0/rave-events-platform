@@ -123,3 +123,28 @@
   .td-details { padding: 0 1.25rem 1.5rem; }
   .td-back { margin-top: 5rem; }
 }
+
+/* Rave Mode entry button (shown on the ticket while the event is live) */
+.td-ravemode-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  width: 100%;
+  margin-top: 1rem;
+  padding: 0.9rem 1rem;
+  background: linear-gradient(135deg, #ff3d00, #ff6b3d);
+  border: none;
+  color: #fff;
+  font-family: var(--font-body, sans-serif);
+  font-weight: 800;
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: 0 4px 20px rgba(255, 61, 0, 0.35);
+}
+.td-ravemode-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 26px rgba(255, 61, 0, 0.45); }
+.td-ravemode-btn svg { margin-right: 0.4rem; vertical-align: middle; }
+.td-ravemode-btn span { font-size: 0.72rem; font-weight: 500; opacity: 0.9; letter-spacing: 0; }

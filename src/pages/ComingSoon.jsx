@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { subscribe, isSubscribed, addNotification, getEvents } from '../lib/db'
 import { FiBell, FiBellOff, FiCheck } from 'react-icons/fi'
@@ -42,6 +42,7 @@ const Countdown = ({ target }) => {
 const ComingSoon = () => {
   const { currentUser } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(true)
   const [subscribed, setSubscribed] = useState({})
@@ -83,7 +84,7 @@ const ComingSoon = () => {
   }, [currentUser, events])
 
   const handleNotify = async (event) => {
-    if (!currentUser) { navigate('/login'); return }
+    if (!currentUser) { navigate('/login', { state: { from: location } }); return }
     if (subscribed[event.id]) return
 
     await subscribe(currentUser.id, event.id)
@@ -135,7 +136,7 @@ const ComingSoon = () => {
                   </div>
                 ) : (
                   <Button icon={<FiBell />} onClick={() => handleNotify(event)}>
-                    Notificarme
+                    {currentUser ? 'Notificarme' : 'Inicia sesión para que te avisemos'}
                   </Button>
                 )}
 

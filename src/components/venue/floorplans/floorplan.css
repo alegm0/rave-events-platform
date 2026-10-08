@@ -160,3 +160,60 @@
 .fpm-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
 .fpm-dot-here { background: #4caf50; }
 .fpm-dot-dest { background: #ff3d00; }
+
+/* ═══════════════════════════════════════════
+   Generic FloorPlanMap (any venue) — Rave Mode GPS
+   ═══════════════════════════════════════════ */
+.fpm-svg.is-indoor { background: #0d0d0f; }
+.fpm-svg.is-outdoor { background: #0b0e0a; }
+
+.fpm-perimeter {
+  fill: rgba(255, 255, 255, 0.012);
+  stroke: rgba(255, 255, 255, 0.14);
+  stroke-width: 0.5;
+  vector-effect: non-scaling-stroke;
+}
+.fpm-perimeter.is-outdoor { stroke-dasharray: 2 1.6; stroke: rgba(130, 200, 150, 0.22); }
+
+.fpm-zone { stroke-width: 0.5; vector-effect: non-scaling-stroke; transition: opacity 0.2s ease; }
+.fpm-zone--floor { fill: rgba(255, 255, 255, 0.045); stroke: rgba(255, 255, 255, 0.1); }
+.fpm-zone--quiet { fill: rgba(120, 160, 255, 0.08); stroke: rgba(120, 160, 255, 0.22); }
+.fpm-zone--booth,
+.fpm-zone--stage { fill: rgba(255, 61, 0, 0.14); stroke: rgba(255, 61, 0, 0.5); stroke-width: 0.7; }
+.fpm-zone-g.is-dest .fpm-zone { fill: rgba(255, 61, 0, 0.26); stroke: #ff3d00; stroke-width: 0.9; }
+
+.fpm-zone-label {
+  fill: rgba(255, 255, 255, 0.5); font-size: 3px; font-weight: 600;
+  letter-spacing: 0.2px; pointer-events: none;
+}
+.fpm-zone-label--floor { fill: rgba(255, 255, 255, 0.42); }
+.fpm-zone-label--quiet { fill: rgba(160, 190, 255, 0.75); }
+.fpm-zone-label--booth,
+.fpm-zone-label--stage { fill: #ffb599; font-size: 2.8px; font-weight: 700; }
+
+/* service chips: emoji + short name (legible, not emoji-only) */
+.fpm-svc-chip {
+  fill: rgba(16, 16, 18, 0.92);
+  stroke: rgba(255, 255, 255, 0.18);
+  stroke-width: 0.35;
+  vector-effect: non-scaling-stroke;
+}
+.fpm-svc-emoji { font-size: 2.3px; pointer-events: none; }
+.fpm-svc-text {
+  fill: rgba(255, 255, 255, 0.85);
+  font-size: 2.2px;
+  font-weight: 600;
+  font-family: var(--font-body, sans-serif);
+  pointer-events: none;
+}
+.fpm-svc.is-dest .fpm-svc-chip { stroke: #ff3d00; stroke-width: 0.9; fill: rgba(34, 22, 16, 0.95); }
+.fpm-svc.is-dest .fpm-svc-text { fill: #fff; font-weight: 800; }
+
+/* direction arrow on the final leg of the route */
+.fpm-arrow path {
+  fill: #ff3d00;
+  stroke: rgba(0, 0, 0, 0.5);
+  stroke-width: 0.3;
+  vector-effect: non-scaling-stroke;
+}
+

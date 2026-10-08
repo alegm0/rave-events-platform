@@ -85,3 +85,41 @@
   .mt-ticket-img { height: 160px; }
   .mt-ticket-right { flex-direction: row; border-left: none; border-top: 1px dashed rgba(255,255,255,0.08); justify-content: space-between; }
 }
+
+/* ── Live event: badge + Rave Mode shortcut ── */
+.mt-ticket--live { border-color: rgba(255, 61, 0, 0.4); }
+.mt-badge-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(255, 61, 0, 0.15);
+  color: #ff6b3d;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+.mt-live-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: #ff3d00;
+  animation: mt-live-pulse 1.4s ease-out infinite;
+}
+@keyframes mt-live-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(255, 61, 0, 0.6); }
+  100% { box-shadow: 0 0 0 7px rgba(255, 61, 0, 0); }
+}
+.mt-ravemode {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.6rem 0.85rem;
+  background: linear-gradient(135deg, #ff3d00, #ff6b3d);
+  border: none;
+  color: #fff;
+  font-family: var(--font-body, sans-serif);
+  font-weight: 800;
+  font-size: 0.78rem;
+  cursor: pointer;
+  border-radius: 4px;
+  white-space: nowrap;
+  transition: transform 0.15s ease;
+}
+.mt-ravemode:hover { transform: translateY(-1px); }

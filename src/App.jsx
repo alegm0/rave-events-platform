@@ -24,6 +24,7 @@ import QRScanner from './pages/organizer/QRScanner'
 import LiveOps from './pages/organizer/LiveOps'
 import EditBrand from './pages/organizer/EditBrand'
 import RaveMode from './pages/RaveMode'
+import Artists from './pages/Artists'
 import NotFound from './pages/NotFound'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 
@@ -49,6 +50,7 @@ function AppShell() {
           <Route path="/event/:id" element={<EventDetail />} />
           <Route path="/calendar" element={<Calendar />} />
           <Route path="/coming-soon" element={<ComingSoon />} />
+          <Route path="/artists" element={<Artists />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/organizer/:id" element={<OrganizerProfile />} />

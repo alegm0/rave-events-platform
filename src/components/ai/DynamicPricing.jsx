@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { calculateDynamicPrice, forecastDemand } from '../../lib/ai/pricing'
-import { FiTrendingUp, FiDollarSign, FiActivity, FiAlertTriangle } from 'react-icons/fi'
+import { hasTiers } from '../../lib/db'
+import { FiTrendingUp, FiDollarSign, FiActivity, FiAlertTriangle, FiLayers } from 'react-icons/fi'
 import './AIComponents.css'
 
 const DynamicPricing = ({ event, tickets }) => {
@@ -15,17 +16,30 @@ const DynamicPricing = ({ event, tickets }) => {
 
   if (!pricing || !forecast) return null
 
+  // When the organizer already runs manual pricing phases, a second engine
+  // suggesting a different single price would contradict them. In that case we
+  // suppress the price recommendation and show demand forecast only — the two
+  // systems stop fighting and the forecast still adds value.
+  const tiered = hasTiers(event)
+
   const priceChange = pricing.suggestedPrice - pricing.basePrice
   const priceDirection = priceChange > 0 ? 'up' : priceChange < 0 ? 'down' : 'same'
 
   return (
     <div className="ai-section">
       <div className="ai-section-header">
-        <h2 className="ai-section-title"><FiActivity /> Pricing Engine & Forecast</h2>
+        <h2 className="ai-section-title"><FiActivity /> {tiered ? 'Demand Forecast' : 'Pricing Engine & Forecast'}</h2>
         <span className="ai-badge">AI</span>
       </div>
 
-      {/* Price recommendation */}
+      {tiered && (
+        <div className="ai-tier-badge ai-tier-normal" style={{ marginBottom: '1rem' }}>
+          <FiLayers style={{ marginRight: '0.4rem' }} /> Este evento usa precios por fases. El precio lo gobiernan tus fases; aquí solo proyectamos la demanda.
+        </div>
+      )}
+
+      {/* Price recommendation — only for single-price events */}
+      {!tiered && (<>
       <div className="ai-pricing-main">
         <div className="ai-pricing-current">
           <span className="ai-pricing-label">Precio actual</span>
@@ -81,6 +95,7 @@ const DynamicPricing = ({ event, tickets }) => {
           <span>Velocidad: ×{pricing.multipliers.velocity.toFixed(2)}</span>
         </div>
       </div>
+      </>)}
 
       {/* Forecast */}
       <div className="ai-forecast">
@@ -115,11 +130,13 @@ const DynamicPricing = ({ event, tickets }) => {
         <span className="ai-confidence">Confianza: {forecast.confidence}%</span>
       </div>
 
-      {/* Recommendation */}
-      <div className="ai-recommendation">
-        <FiDollarSign />
-        <p>{pricing.recommendation}</p>
-      </div>
+      {/* Recommendation — price advice only applies to single-price events */}
+      {!tiered && (
+        <div className="ai-recommendation">
+          <FiDollarSign />
+          <p>{pricing.recommendation}</p>
+        </div>
+      )}
     </div>
   )
 }

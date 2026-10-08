@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { getTicketsByUser, getEvent } from '../lib/db'
+import { isEventLive } from '../lib/timetable'
 import { useAuth } from '../context/AuthContext'
-import { FiCalendar, FiMapPin, FiClock, FiArrowRight } from 'react-icons/fi'
+import { FiCalendar, FiMapPin, FiClock, FiArrowRight, FiRadio } from 'react-icons/fi'
 import Button from '../components/ui/Button'
 import './MyTickets.css'
 
 const MyTickets = () => {
   const { currentUser } = useAuth()
+  const navigate = useNavigate()
   const [tickets, setTickets] = useState([])
   const [filter, setFilter] = useState('all')
   const [loading, setLoading] = useState(true)
@@ -89,16 +91,21 @@ const MyTickets = () => {
                 const end = new Date(start.getTime() + (t.event.duration || 6) * 3600000)
                 return end < new Date()
               })()
+              const live = t.event && isEventLive(t.event)
               return (
-                <Link to={`/ticket/${t.id}`} key={t.id} className={`mt-ticket ${isPast ? 'mt-ticket--past' : ''}`}>
+                <Link to={`/ticket/${t.id}`} key={t.id} className={`mt-ticket ${isPast ? 'mt-ticket--past' : ''} ${live ? 'mt-ticket--live' : ''}`}>
                   <div className="mt-ticket-img">
                     <img src={t.event?.imageUrl || 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=600'} alt="" />
                   </div>
                   <div className="mt-ticket-body">
                     <div className="mt-ticket-top">
-                      <span className={`mt-badge ${t.status}`}>
-                        {t.status === 'valid' ? (isPast ? 'Evento pasado' : '● Válido') : '✓ Asistido'}
-                      </span>
+                      {live ? (
+                        <span className="mt-badge mt-badge-live"><span className="mt-live-dot" /> EN VIVO</span>
+                      ) : (
+                        <span className={`mt-badge ${t.status}`}>
+                          {t.status === 'valid' ? (isPast ? 'Evento pasado' : '● Válido') : '✓ Asistido'}
+                        </span>
+                      )}
                       {t.event?.genre && <span className="mt-genre">{t.event.genre}</span>}
                     </div>
                     <h3 className="mt-ticket-title">{t.event?.title || 'Evento'}</h3>
@@ -109,8 +116,20 @@ const MyTickets = () => {
                     </div>
                   </div>
                   <div className="mt-ticket-right">
+                    {/* QR indicator is always present (the real QR is on the
+                        ticket detail). For a live event we ALSO offer Rave Mode. */}
                     <div className="mt-ticket-qr-mini">QR</div>
-                    <span className="mt-ticket-arrow"><FiArrowRight /></span>
+                    {live ? (
+                      <button
+                        type="button"
+                        className="mt-ravemode"
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigate(`/rave-mode/${t.event.id}`) }}
+                        title="Entrar a Rave Mode">
+                        <FiRadio /> Rave Mode
+                      </button>
+                    ) : (
+                      <span className="mt-ticket-arrow"><FiArrowRight /></span>
+                    )}
                   </div>
                   <div className="mt-ticket-tear"></div>
                 </Link>

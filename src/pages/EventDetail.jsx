@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
 import { getEvent, getEvents, createTicket, getUser, getTicketsByUser, addNotification, getReviewsByEvent, addReview, getAverageRating, markGoing, getGoingCount, isGoing, getGoingUsers, hasTiers, getTierStatus } from '../lib/db'
 import { useAuth } from '../context/AuthContext'
 import { FiCalendar, FiMapPin, FiClock, FiUsers, FiArrowLeft, FiShare2, FiCheck, FiMusic, FiArrowRight } from 'react-icons/fi'
@@ -23,6 +23,7 @@ const initials = (name = '') => {
 const EventDetail = () => {
   const { id } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
   const { currentUser, userProfile } = useAuth()
   const toast = useToast()
   const [event, setEvent] = useState(null)
@@ -72,7 +73,8 @@ const EventDetail = () => {
   }, [event])
 
   const handlePurchase = () => {
-    if (!currentUser) { navigate('/login'); return }
+    // Send the raver back to this event after logging in instead of to /events.
+    if (!currentUser) { navigate('/login', { state: { from: location } }); return }
     // Defence in depth: never open checkout for an event that already finished.
     if (eventEnded) { toast.error('Este evento ya finalizó'); return }
     setShowConfirm(true)
@@ -103,11 +105,28 @@ const EventDetail = () => {
     toast.success('¡Ticket comprado exitosamente!')
   }
 
-  const handleShare = () => {
+  const handleShare = async () => {
     const url = window.location.href
-    navigator.clipboard?.writeText(url)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url)
+      } else {
+        // Fallback for non-secure contexts where the Clipboard API is unavailable.
+        const ta = document.createElement('textarea')
+        ta.value = url
+        ta.style.position = 'fixed'
+        ta.style.opacity = '0'
+        document.body.appendChild(ta)
+        ta.select()
+        const ok = document.execCommand('copy')
+        document.body.removeChild(ta)
+        if (!ok) throw new Error('copy failed')
+      }
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      toast.error('No se pudo copiar el enlace')
+    }
   }
 
   if (!event) return <div className="ed-loading"><div className="loader"></div></div>
@@ -335,8 +354,12 @@ const EventDetail = () => {
             </div>
             )}
 
-            {/* Reviews — only for past events */}
-            {new Date(event.date) < new Date() && (
+            {/* Reviews section. We show it when there's something meaningful to
+                show: the event already finished, there are reviews to read, or
+                the viewer holds a ticket (so a ticket-holder for a FUTURE event
+                sees the "you'll be able to review once it ends" hint instead of
+                the section silently disappearing). */}
+            {(eventEnded || reviews.length > 0 || (currentUser && !isOrg && alreadyOwned)) && (
             <div className="ed-section">
               <h2 className="ed-section-title">⭐ Reviews {avgRating > 0 && `(${avgRating}/5)`}</h2>
               {/* Only attendees (people who had a ticket) can rate the event, and
@@ -383,9 +406,9 @@ const EventDetail = () => {
                     </div>
                   ))}
                 </div>
-              ) : (
+              ) : eventEnded ? (
                 <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.85rem' }}>Aún no hay reviews. ¡Sé el primero!</p>
-              )}
+              ) : null}
             </div>
             )}
           </div>
@@ -487,7 +510,7 @@ const EventDetail = () => {
 
               {!currentUser && !purchased && (
                 <p className="ed-login-hint">
-                  <Link to="/login">Inicia sesión</Link> para comprar tickets
+                  <Link to="/login" state={{ from: location }}>Inicia sesión</Link> para comprar tickets
                 </p>
               )}
 

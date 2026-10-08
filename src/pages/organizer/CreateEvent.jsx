@@ -78,8 +78,10 @@ const CreateEvent = () => {
   const [step, setStep] = useState(1)
   const [errors, setErrors] = useState({})
   const [form, setForm] = useState({
+    // Note: there's no separate `multiDay`/`endDate` — whether an event spans
+    // more than one day is derived from `duration` (start + duration), which is
+    // the single source of truth used everywhere (cards, detail, analytics).
     title: '', description: '', date: '', time: '22:00', duration: '6',
-    multiDay: false, endDate: '',
     location: '', address: '', city: '', price: '0', capacity: '120',
     genre: '', imageUrl: '', imagePos: 50, minAge: '18',
     lineup: [],
@@ -366,7 +368,7 @@ const CreateEvent = () => {
                     ].map(d => (
                       <button key={d.val} type="button"
                         className={`ce-dur-btn ${form.duration === d.val ? 'active' : ''}`}
-                        onClick={() => { set('duration', d.val); set('multiDay', parseInt(d.val) > 20) }}>
+                        onClick={() => set('duration', d.val)}>
                         <strong>{d.label}</strong>
                         <span>{d.sub}</span>
                       </button>
@@ -375,7 +377,7 @@ const CreateEvent = () => {
                   <div className="ce-custom-dur">
                     <span>O personaliza:</span>
                     <input type="number" value={form.duration} min="1" max="168"
-                      onChange={e => { set('duration', e.target.value); set('multiDay', parseInt(e.target.value) > 20) }}
+                      onChange={e => set('duration', e.target.value)}
                       style={{ width: '70px' }} />
                     <span>horas</span>
                   </div>

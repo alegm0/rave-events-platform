@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate, Navigate } from 'react-router-dom'
+import { Link, useNavigate, Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { FiMail, FiLock } from 'react-icons/fi'
 import Input from '../components/ui/Input'
@@ -16,9 +16,17 @@ const Login = () => {
   const [loading, setLoading] = useState(false)
   const { login, currentUser, userProfile } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const toast = useToast()
 
-  if (currentUser) return <Navigate to={userProfile?.role === 'organizer' ? '/organizer/dashboard' : '/events'} replace />
+  // Where the user was trying to go before being asked to log in. Organizers
+  // never return to a user-only destination; they always land on their dashboard.
+  const from = location.state?.from?.pathname
+
+  if (currentUser) {
+    const dest = userProfile?.role === 'organizer' ? '/organizer/dashboard' : (from || '/events')
+    return <Navigate to={dest} replace />
+  }
 
   const handleChange = (e) => {
     setFormData({
@@ -35,7 +43,7 @@ const Login = () => {
     try {
       const user = await login(formData.email, formData.password)
       toast.success('¡Bienvenido de vuelta!')
-      navigate(user.role === 'organizer' ? '/organizer/dashboard' : '/events')
+      navigate(user.role === 'organizer' ? '/organizer/dashboard' : (from || '/events'))
     } catch (error) {
       setError('Correo o contraseña incorrectos. Intenta de nuevo.')
       console.error(error)

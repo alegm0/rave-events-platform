@@ -3,102 +3,6 @@
 // Pure heuristic-based — no external APIs ($0)
 
 /**
- * Analyze a ticket purchase for fraud signals
- * @param {object} purchase - { userId, eventId, timestamp }
- * @param {Array} allTickets - All tickets for analysis context
- * @param {Array} userHistory - All tickets by this user
- * @returns {object} Fraud risk assessment
- */
-export const analyzePurchase = (purchase, allTickets, userHistory) => {
-  const signals = []
-  let riskScore = 0 // 0-100
-
-  const { userId, eventId, timestamp } = purchase
-  const purchaseTime = new Date(timestamp || Date.now())
-
-  // ── Signal 1: Velocity check ──
-  // Multiple purchases in rapid succession (bot behavior)
-  const recentPurchases = userHistory.filter(t => {
-    const diff = Math.abs(purchaseTime - new Date(t.purchaseDate))
-    return diff < 60000 // within 1 minute
-  })
-  if (recentPurchases.length >= 3) {
-    riskScore += 35
-    signals.push({ type: 'velocity', severity: 'high', message: `${recentPurchases.length} compras en menos de 1 minuto — posible bot` })
-  } else if (recentPurchases.length >= 2) {
-    riskScore += 15
-    signals.push({ type: 'velocity', severity: 'medium', message: 'Compras rápidas consecutivas' })
-  }
-
-  // ── Signal 2: Bulk buying ──
-  // Same user buying many tickets to same event
-  const sameEventTickets = userHistory.filter(t => t.eventId === eventId)
-  if (sameEventTickets.length >= 5) {
-    riskScore += 30
-    signals.push({ type: 'bulk', severity: 'high', message: `${sameEventTickets.length} tickets para el mismo evento — posible reventa` })
-  } else if (sameEventTickets.length >= 3) {
-    riskScore += 15
-    signals.push({ type: 'bulk', severity: 'medium', message: 'Múltiples tickets del mismo evento' })
-  }
-
-  // ── Signal 3: Off-hours purchase ──
-  // Purchases at unusual hours (3-6 AM in local timezone) 
-  const hour = purchaseTime.getHours()
-  if (hour >= 3 && hour <= 5) {
-    riskScore += 10
-    signals.push({ type: 'timing', severity: 'low', message: 'Compra en horario inusual (3-5 AM)' })
-  }
-
-  // ── Signal 4: New account rapid spending ──
-  // User created very recently and already buying expensive tickets
-  const userTicketCount = userHistory.length
-  if (userTicketCount === 0) {
-    // First ticket ever — slight flag if it's a high-value event
-    riskScore += 5
-    signals.push({ type: 'new_account', severity: 'low', message: 'Primera compra de la cuenta' })
-  }
-
-  // ── Signal 5: Purchasing pattern across events ──
-  // Buying tickets to events that are very different (genre/city) — scalper pattern
-  const uniqueEvents = new Set(userHistory.map(t => t.eventId))
-  if (uniqueEvents.size > 8) {
-    riskScore += 20
-    signals.push({ type: 'scatter', severity: 'medium', message: `Tickets a ${uniqueEvents.size} eventos distintos — patrón de scalper` })
-  }
-
-  // ── Signal 6: Rapid sell-out contribution ──
-  // If event is selling fast and this user is buying bulk
-  const eventTickets = allTickets.filter(t => t.eventId === eventId)
-  const last10min = eventTickets.filter(t => {
-    const diff = Math.abs(purchaseTime - new Date(t.purchaseDate))
-    return diff < 600000 // 10 minutes
-  })
-  if (last10min.length > 20) {
-    riskScore += 10
-    signals.push({ type: 'surge', severity: 'medium', message: 'Compra durante pico de ventas inusual' })
-  }
-
-  // ── Risk level ──
-  let riskLevel = 'low'
-  if (riskScore >= 50) riskLevel = 'high'
-  else if (riskScore >= 25) riskLevel = 'medium'
-
-  return {
-    riskScore: Math.min(100, riskScore),
-    riskLevel,
-    signals,
-    action: riskLevel === 'high' ? 'flag' : riskLevel === 'medium' ? 'monitor' : 'allow',
-    recommendation: getRecommendation(riskLevel, signals),
-  }
-}
-
-function getRecommendation(level, signals) {
-  if (level === 'high') return 'Compra flaggeada para revisión manual. Considere bloquear o requerir verificación adicional.'
-  if (level === 'medium') return 'Actividad ligeramente sospechosa. Monitorear futuras compras de este usuario.'
-  return 'Sin anomalías detectadas. Transacción normal.'
-}
-
-/**
  * Analyze all purchases for an event to detect overall fraud patterns
  * @param {Array} tickets - All tickets for event
  * @param {Array} allTickets - All tickets in system (for user history)
@@ -106,91 +10,92 @@ function getRecommendation(level, signals) {
  */
 export const analyzeEventFraud = (tickets, allTickets) => {
   if (!tickets || tickets.length === 0) {
-    return { riskLevel: 'low', flaggedCount: 0, alerts: [], summary: 'Sin datos suficientes para análisis.' }
+    return {
+      riskLevel: 'low', flaggedCount: 0, alerts: [],
+      totalBuyers: 0,
+      stats: { burstPeak: 0, offHoursPct: 0, scalperBuyers: 0 },
+      summary: 'Sin datos suficientes para análisis.',
+    }
   }
 
-  // Group by user
-  const userTickets = {}
-  tickets.forEach(t => {
-    if (!userTickets[t.userId]) userTickets[t.userId] = []
-    userTickets[t.userId].push(t)
-  })
-
+  // IMPORTANT: this platform enforces one ticket per user per event (RF07), so
+  // classic "bulk buying" or "rapid repeat purchase" by a single user is
+  // impossible here. Detecting it would be theatre. Instead we look at signals
+  // that CAN actually occur under that rule: cross-user purchase bursts (bot
+  // swarms grabbing one ticket each), off-hours concentration, and users who
+  // behave like scalpers across many different events (needs full history).
+  const buyers = new Set(tickets.map(t => t.userId))
   const alerts = []
-  let flaggedCount = 0
 
-  Object.entries(userTickets).forEach(([userId, userTix]) => {
-    // Bulk buying detection
-    if (userTix.length >= 4) {
-      flaggedCount++
-      alerts.push({
-        userId,
-        type: 'bulk_purchase',
-        severity: userTix.length >= 6 ? 'high' : 'medium',
-        message: `Usuario compró ${userTix.length} tickets`,
-        ticketCount: userTix.length,
-      })
-    }
-
-    // Rapid purchase detection
-    const sorted = userTix.sort((a, b) => new Date(a.purchaseDate) - new Date(b.purchaseDate))
-    for (let i = 1; i < sorted.length; i++) {
-      const diff = new Date(sorted[i].purchaseDate) - new Date(sorted[i-1].purchaseDate)
-      if (diff < 5000) { // 5 seconds between purchases
-        alerts.push({
-          userId,
-          type: 'rapid_purchase',
-          severity: 'high',
-          message: 'Compras con menos de 5 segundos de diferencia',
-        })
-        flaggedCount++
-        break
-      }
-    }
-  })
-
-  // Overall velocity check
+  // ── Signal 1: Purchase burst across distinct users ──
+  // Many different accounts buying within the same minute looks like a bot
+  // swarm or a resale operation spreading purchases across accounts.
   const sortedAll = [...tickets].sort((a, b) => new Date(a.purchaseDate) - new Date(b.purchaseDate))
-  let maxBurstCount = 0
+  let burstPeak = 0
   for (let i = 0; i < sortedAll.length; i++) {
-    const burst = sortedAll.filter(t => {
-      const diff = new Date(t.purchaseDate) - new Date(sortedAll[i].purchaseDate)
-      return diff >= 0 && diff < 60000 // 1 minute window
-    })
-    maxBurstCount = Math.max(maxBurstCount, burst.length)
+    const windowUsers = new Set(
+      sortedAll.filter(t => {
+        const diff = new Date(t.purchaseDate) - new Date(sortedAll[i].purchaseDate)
+        return diff >= 0 && diff < 60000 // 1-minute window
+      }).map(t => t.userId)
+    )
+    burstPeak = Math.max(burstPeak, windowUsers.size)
   }
-  if (maxBurstCount > 10) {
-    alerts.push({
-      type: 'traffic_spike',
-      severity: 'medium',
-      message: `Pico de ${maxBurstCount} compras en 1 minuto`,
+  if (burstPeak > 15) {
+    alerts.push({ type: 'traffic_spike', severity: 'high', message: `Pico de ${burstPeak} compradores distintos en 1 minuto — posible swarm de bots` })
+  } else if (burstPeak > 8) {
+    alerts.push({ type: 'traffic_spike', severity: 'medium', message: `Pico de ${burstPeak} compradores en 1 minuto — vigilar` })
+  }
+
+  // ── Signal 2: Off-hours concentration (3-5 AM) ──
+  const offHours = tickets.filter(t => {
+    const h = new Date(t.purchaseDate).getHours()
+    return h >= 3 && h <= 5
+  }).length
+  const offHoursPct = Math.round((offHours / tickets.length) * 100)
+  if (tickets.length >= 10 && offHoursPct >= 40) {
+    alerts.push({ type: 'off_hours', severity: 'medium', message: `${offHoursPct}% de las compras ocurrieron entre 3-5 AM — patrón automatizado` })
+  }
+
+  // ── Signal 3: Scalper behaviour across events (uses full ticket history) ──
+  // A buyer holding tickets to an unusually high number of distinct events
+  // across the platform resembles a scalper. Only computable with allTickets.
+  let scalperBuyers = 0
+  if (Array.isArray(allTickets) && allTickets.length) {
+    const eventsByUser = {}
+    allTickets.forEach(t => {
+      if (!buyers.has(t.userId)) return
+      ;(eventsByUser[t.userId] ||= new Set()).add(t.eventId)
+    })
+    Object.entries(eventsByUser).forEach(([userId, evSet]) => {
+      if (evSet.size > 8) {
+        scalperBuyers++
+        alerts.push({ type: 'scalper', severity: 'medium', message: `Comprador con tickets a ${evSet.size} eventos distintos — patrón de scalper`, userId })
+      }
     })
   }
 
-  // Risk level must reflect BOTH flagged buyers and standalone alerts (like a
-  // traffic spike), otherwise the panel contradicts itself — "no anomalies"
-  // while an alert is shown. High-severity alerts raise the floor to medium.
+  const flaggedCount = alerts.length
   const hasHighAlert = alerts.some(a => a.severity === 'high')
-  const totalAlerts = alerts.length
   let riskLevel = 'low'
-  if (flaggedCount > 3 || hasHighAlert) riskLevel = 'high'
-  else if (flaggedCount > 0 || totalAlerts > 0) riskLevel = 'medium'
+  if (hasHighAlert) riskLevel = 'high'
+  else if (flaggedCount > 0) riskLevel = 'medium'
 
   const summary = riskLevel === 'high'
-    ? `⚠️ ${flaggedCount > 0 ? `${flaggedCount} comprador(es) flaggeado(s). ` : ''}Se detectó actividad sospechosa.`
+    ? '⚠️ Se detectó actividad potencialmente automatizada. Revisa las alertas.'
     : riskLevel === 'medium'
-    ? `⚡ ${totalAlerts} alerta(s) para monitorear. Sin riesgo alto.`
+    ? `⚡ ${flaggedCount} alerta(s) para monitorear. Sin riesgo alto.`
     : '✅ No se detectaron anomalías. Compras normales.'
 
   return {
     riskLevel,
     flaggedCount,
-    totalBuyers: Object.keys(userTickets).length,
+    totalBuyers: buyers.size,
     alerts: alerts.sort((a, b) => (b.severity === 'high' ? 1 : 0) - (a.severity === 'high' ? 1 : 0)),
     stats: {
-      avgTicketsPerUser: Math.round(tickets.length / Object.keys(userTickets).length * 10) / 10,
-      maxTicketsOneUser: Math.max(...Object.values(userTickets).map(t => t.length)),
-      maxBurstPerMinute: maxBurstCount,
+      burstPeak,
+      offHoursPct,
+      scalperBuyers,
     },
     summary,
   }

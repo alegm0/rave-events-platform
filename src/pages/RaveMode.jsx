@@ -5,7 +5,6 @@ import { useAuth } from '../context/AuthContext'
 import { buildTimeline, getNowNext, minutesUntil, formatTime } from '../lib/timetable'
 import { findServices, resolveDestination } from '../lib/venue'
 import FloorPlanMap from '../components/venue/FloorPlanMap'
-import { warehouseAnchors } from '../components/venue/floorplans/warehouse'
 import { FiX, FiDroplet, FiLogOut, FiChevronLeft, FiArrowRight } from 'react-icons/fi'
 import { MdWc, MdChair, MdLocalHospital, MdVolumeOff, MdSmokingRooms } from 'react-icons/md'
 import './RaveMode.css'
@@ -65,7 +64,7 @@ const RaveMode = () => {
         <p style={{ color: 'rgba(255,255,255,0.6)', maxWidth: '320px' }}>
           Necesitas una entrada para este evento para usar la vista en vivo del venue.
         </p>
-        <button className="rm-back" onClick={() => navigate(`/event/${id}`)}>
+        <button className="rm-back" onClick={() => navigate(`/event/${id}`, { replace: true })}>
           <FiChevronLeft /> Ver el evento
         </button>
       </div>
@@ -77,8 +76,14 @@ const RaveMode = () => {
   const venue = event.venue
   const minsToNext = next ? minutesUntil(next.start, now) : null
 
-  // "You are here" = the main floor (in front of the main stage), where the crowd is.
-  const origin = warehouseAnchors?.main || { x: 50, y: 30 }
+  // "You are here" = centre of the main dance floor (where the crowd is), derived
+  // from THIS venue — not a fixed warehouse anchor.
+  const mainFloor = (venue?.zones || []).find((z) => z.type === 'floor')
+    || (venue?.zones || []).find((z) => z.type === 'booth' || z.type === 'stage')
+    || (venue?.zones || [])[0]
+  const origin = mainFloor && typeof mainFloor.x === 'number'
+    ? { x: mainFloor.x + (mainFloor.w || 0) / 2, y: mainFloor.y + (mainFloor.h || 0) / 2 }
+    : { x: 50, y: 45 }
 
   // Map a venue point (service or zone) to floor-plan coordinates.
   const pointFor = (item) => ({ x: item.x, y: item.y })
@@ -88,8 +93,8 @@ const RaveMode = () => {
     if (action.zoneType) {
       const zone = (venue?.zones || []).find((z) => z.type === action.zoneType)
       if (!zone) return
-      const anchor = action.zoneType === 'quiet' ? warehouseAnchors.chill : { x: zone.x + zone.w / 2, y: zone.y + zone.h / 2 }
-      setPanel({ title: zone.label, destination: { ...anchor, label: zone.label }, note: 'Zona de baja estimulación · abierta toda la noche', walkMin: 3 })
+      const anchor = { x: zone.x + (zone.w || 0) / 2, y: zone.y + (zone.h || 0) / 2 }
+      setPanel({ title: zone.label, destination: { ...anchor, id: zone.id, label: zone.label }, note: 'Zona de baja estimulación · abierta toda la noche', walkMin: 3 })
       return
     }
     const resolved = resolveDestination(venue, action.serviceType, comfort)
@@ -97,11 +102,20 @@ const RaveMode = () => {
     const s = resolved.service
     setPanel({
       title: s.label,
-      destination: { ...pointFor(s), label: s.label },
+      destination: { ...pointFor(s), id: s.id, label: s.label },
       note: resolved.reason,
       walkMin: s.walkMin,
       accessible: s.accessible,
     })
+  }
+
+  // Leaving Rave Mode should go BACK where you came from (event, ticket, My
+  // Tickets…), not push a new /event route — pushing is what created the
+  // event ↔ rave-mode back-button loop. Fall back to the event (replace) if
+  // there's no history (e.g. opened by direct URL).
+  const exitRaveMode = () => {
+    if (window.history.length > 1) navigate(-1)
+    else navigate(`/event/${id}`, { replace: true })
   }
 
   // Open the "next set for you" → route to its room
@@ -116,11 +130,11 @@ const RaveMode = () => {
       || zones[0]
     const anchor = room && typeof room.x === 'number'
       ? { x: room.x + (room.w || 0) / 2, y: room.y + (room.h || 0) / 2 }
-      : warehouseAnchors.main
+      : { x: 50, y: 20 }
     setPanel({
       title: next.name,
       subtitle: room ? room.label : null,
-      destination: { ...anchor, label: room?.label || 'Escenario' },
+      destination: { ...anchor, id: room?.id, label: room?.label || 'Escenario' },
       note: `Empieza a las ${formatTime(next.start)}`,
       walkMin: 3,
     })
@@ -129,7 +143,7 @@ const RaveMode = () => {
   return (
     <div className="rm">
       <div className="rm-top">
-        <button className="rm-back" onClick={() => navigate(`/event/${id}`)} aria-label="Salir de Rave Mode">
+        <button className="rm-back" onClick={exitRaveMode} aria-label="Salir de Rave Mode">
           <FiChevronLeft /> Salir
         </button>
         <span className="rm-event">{event.title}</span>

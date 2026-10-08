@@ -106,3 +106,22 @@ export const getArtistTracks = async (name, limit = 5) => {
   if (tracks.length === 0) tracks = await searchTracksByArtist(artist.name, limit)
   return { artist, tracks }
 }
+
+// Artist photo with a persistent localStorage cache. Deezer photos are stable,
+// so once resolved we keep the URL in the browser — instant on later visits and
+// shared across the Artists page and the profile's "followed artists". We cache
+// misses too ('') so we don't repeatedly hit Deezer for an artist it can't find.
+const IMG_PREFIX = 'rave:artistimg:'
+export const getArtistImage = async (name) => {
+  if (!name?.trim()) return null
+  const key = IMG_PREFIX + name.trim().toLowerCase()
+  try {
+    const cached = localStorage.getItem(key)
+    if (cached !== null) return cached || null
+  } catch { /* localStorage unavailable — fall through to network */ }
+
+  const artist = await findArtist(name)
+  const url = artist?.picture || ''
+  try { localStorage.setItem(key, url) } catch { /* quota/full — ignore */ }
+  return url || null
+}

@@ -94,6 +94,7 @@ const Navbar = () => {
             ) : (
               <>
                 <Link to="/events" className={`nav-link ${isActive('/events')}`}>Eventos</Link>
+                <Link to="/artists" className={`nav-link ${isActive('/artists')}`}>Artistas</Link>
                 <Link to="/calendar" className={`nav-link ${isActive('/calendar')}`}>Calendario</Link>
                 <Link to="/coming-soon" className={`nav-link ${isActive('/coming-soon')}`}>Próximamente</Link>
               </>
@@ -181,6 +182,7 @@ const Navbar = () => {
             ) : (
               <>
                 <Link to="/events" className="mobile-link">Eventos</Link>
+                <Link to="/artists" className="mobile-link">Artistas</Link>
                 <Link to="/calendar" className="mobile-link">Calendario</Link>
                 <Link to="/coming-soon" className="mobile-link">Próximamente</Link>
               </>

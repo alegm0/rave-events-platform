@@ -117,10 +117,10 @@ const PreRaveBrief = ({ event, onMeetLineup }) => {
             <FiHeadphones />
             <span>
               {discovery.toDiscoverCount === 0
-                ? `Ya conoces a los ${discovery.total} artistas.`
+                ? `Ya viste a ${discovery.total === 1 ? 'este artista' : `estos ${discovery.total} artistas`} en otros eventos de tu colección.`
                 : discovery.knownCount === 0
-                  ? `No conoces a ninguno de los ${discovery.total} artistas todavía.`
-                  : `Conoces a ${discovery.knownCount} de ${discovery.total}. Descubre los otros ${discovery.toDiscoverCount}.`}
+                  ? `${discovery.total === 1 ? 'Este artista es nuevo' : `Estos ${discovery.total} artistas son nuevos`} para ti. Escúchalos antes de ir.`
+                  : `Ya viste a ${discovery.knownCount} de ${discovery.total} en otros eventos. Descubre ${discovery.toDiscoverCount === 1 ? 'al que falta' : `los otros ${discovery.toDiscoverCount}`}.`}
             </span>
           </div>
           {discovery.toDiscoverCount > 0 && onMeetLineup && (

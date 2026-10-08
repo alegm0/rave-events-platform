@@ -5,4 +5,4 @@ export { searchArtist, getArtistTopTracks, analyzeLineupStyle, generateEventPlay
 export { calculateDynamicPrice, forecastDemand } from './pricing'
 export { analyzeReview, analyzeEventSentiment } from './sentiment'
 export { buildUserProfile, getRecommendations, getSimilarEvents } from './recommendations'
-export { analyzePurchase, analyzeEventFraud } from './fraud'
+export { analyzeEventFraud } from './fraud'

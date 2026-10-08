@@ -30,23 +30,24 @@ const FraudDetection = ({ tickets, allTickets }) => {
         <p>{report.summary}</p>
       </div>
 
-      {/* Stats */}
+      {/* Stats — signals that are actually possible under the 1-ticket-per-user
+          rule: cross-user purchase bursts, off-hours concentration, scalpers. */}
       <div className="ai-metrics-grid">
         <div className="ai-metric-card">
           <span className="ai-metric-value">{report.totalBuyers}</span>
           <span className="ai-metric-label">Compradores únicos</span>
         </div>
         <div className="ai-metric-card">
-          <span className="ai-metric-value">{report.stats.avgTicketsPerUser}</span>
-          <span className="ai-metric-label">Avg tickets/usuario</span>
+          <span className="ai-metric-value">{report.stats.burstPeak}</span>
+          <span className="ai-metric-label">Pico compras/min</span>
         </div>
         <div className="ai-metric-card">
-          <span className="ai-metric-value">{report.stats.maxTicketsOneUser}</span>
-          <span className="ai-metric-label">Max tickets 1 usuario</span>
+          <span className="ai-metric-value">{report.stats.offHoursPct}%</span>
+          <span className="ai-metric-label">Compras 3-5 AM</span>
         </div>
         <div className="ai-metric-card">
           <span className="ai-metric-value">{report.flaggedCount}</span>
-          <span className="ai-metric-label">Flaggeados</span>
+          <span className="ai-metric-label">Alertas</span>
         </div>
       </div>
 

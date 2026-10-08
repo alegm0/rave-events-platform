@@ -2,10 +2,31 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { getTicketsByUser, getEventsByOrganizer, getTicketsByEvent, getEvent, sumRevenue, getSavedArtists, toggleSavedArtist } from '../lib/db'
+import { getArtistImage } from '../lib/ai/deezer'
 import { FiUser, FiMail, FiCalendar, FiPlus, FiBarChart2, FiUsers, FiDollarSign, FiLogOut, FiArrowRight, FiStar, FiX } from 'react-icons/fi'
 import Button from '../components/ui/Button'
 import ComfortProfile from '../components/ui/ComfortProfile'
 import './Profile.css'
+
+// A followed-artist chip that lazily loads the artist's photo (cached) so the
+// profile shows faces, not just names.
+const ArtistChip = ({ name, onRemove }) => {
+  const [img, setImg] = useState(null)
+  useEffect(() => {
+    let active = true
+    getArtistImage(name).then((pic) => { if (active) setImg(pic) })
+    return () => { active = false }
+  }, [name])
+  return (
+    <span className="prof-artist-chip">
+      <span className="prof-artist-ava">{img ? <img src={img} alt="" /> : <FiStar />}</span>
+      {name}
+      <button type="button" className="prof-artist-remove" title="Dejar de seguir" onClick={onRemove}>
+        <FiX />
+      </button>
+    </span>
+  )
+}
 
 const Profile = () => {
   const { currentUser, userProfile, logout } = useAuth()
@@ -190,29 +211,27 @@ const Profile = () => {
                 <div className="prof-section-title">Comodidad y accesibilidad</div>
                 <ComfortProfile />
 
-                {/* Saved artists (⭐ from event line-ups) */}
-                <div className="prof-section-title">Artistas que sigues</div>
+                {/* Saved artists (⭐ followed from the Artists page or line-ups) */}
+                <div className="prof-section-title prof-section-title--link">
+                  Artistas que sigues
+                  <Link to="/artists" className="prof-section-action">Explorar artistas <FiArrowRight /></Link>
+                </div>
                 {savedArtists.length > 0 ? (
                   <div className="prof-artists">
                     {savedArtists.map((name) => (
-                      <span key={name} className="prof-artist-chip">
-                        <FiStar /> {name}
-                        <button
-                          type="button"
-                          className="prof-artist-remove"
-                          title="Dejar de seguir"
-                          onClick={async () => {
-                            const next = await toggleSavedArtist(currentUser.id, name)
-                            setSavedArtists(next)
-                          }}>
-                          <FiX />
-                        </button>
-                      </span>
+                      <ArtistChip
+                        key={name}
+                        name={name}
+                        onRemove={async () => {
+                          const next = await toggleSavedArtist(currentUser.id, name)
+                          setSavedArtists(next)
+                        }}
+                      />
                     ))}
                   </div>
                 ) : (
                   <p className="prof-empty-hint">
-                    Aún no sigues a ningún artista. Toca la ⭐ junto a un DJ en el line-up de cualquier evento para seguirlo; aparecerán aquí y en tu Pre-Rave Brief.
+                    Aún no sigues a ningún artista. Ve a <Link to="/artists" style={{ color: '#ff6b3d' }}>Artistas</Link> para buscar y seguir a tus DJs favoritos (o toca la ⭐ en el line-up de un evento). Los que sigas se usan en tus recomendaciones y tu Pre-Rave Brief.
                   </p>
                 )}
 

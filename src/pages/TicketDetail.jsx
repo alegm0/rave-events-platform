@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { getTicket, getEvent, getUser, cancelTicket } from '../lib/db'
+import { isEventLive } from '../lib/timetable'
 import { QRCodeSVG } from 'qrcode.react'
-import { FiCalendar, FiMapPin, FiClock, FiArrowLeft, FiUser, FiMusic, FiTrash2 } from 'react-icons/fi'
+import { FiCalendar, FiMapPin, FiClock, FiArrowLeft, FiUser, FiMusic, FiTrash2, FiRadio } from 'react-icons/fi'
 import Button from '../components/ui/Button'
 import Modal from '../components/ui/Modal'
 import { useToast } from '../components/ui/Toast'
@@ -128,6 +129,15 @@ const TicketDetail = () => {
                     ? 'Entrada ya validada en la puerta.'
                     : 'Muestra este código en la entrada del evento'}
               </p>
+
+              {/* Rave Mode is most useful while the event is happening — surface
+                  it right on the ticket when the event is live. */}
+              {event && isEventLive(event) && (
+                <button className="td-ravemode-btn" onClick={() => navigate(`/rave-mode/${event.id}`)}>
+                  <FiRadio /> Entrar a Rave Mode
+                  <span>Vista en vivo del venue</span>
+                </button>
+              )}
             </div>
 
             {/* Details */}

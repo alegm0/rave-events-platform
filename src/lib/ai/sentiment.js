@@ -8,7 +8,7 @@ const POSITIVE_WORDS = [
   'increíble', 'increible', 'brutal', 'genial', 'excelente', 'perfecto', 'impresionante',
   'espectacular', 'hermoso', 'épico', 'épica', 'lo mejor', 'wow', 'tremendo',
   'buenísimo', 'buenisimo', 'maravilloso', 'sublime', 'fantástico', 'fantastico',
-  'extraordinario', 'inmejorable', 'brutal', 'crack', 'top', 'diosa', 'dios',
+  'extraordinario', 'inmejorable', 'crack', 'top', 'diosa', 'dios',
   'fiesta', 'goce', 'vibra', 'energía', 'energia', 'ambientazo', 'bomba',
   'recomiendo', 'repetiría', 'repetiria', 'volvería', 'volveria', 'encantó', 'encanto',
   'alucinante', 'magistral', 'bestial', 'imponente',
@@ -64,6 +64,18 @@ const ASPECTS = {
  * @param {string} text - Review text
  * @returns {object} Sentiment analysis result
  */
+// Match a lexicon term against text. Multi-word phrases ("no recomiendo") are
+// matched as substrings, but single words are matched on word boundaries so
+// "mal" doesn't fire on "malabares" and "dios" doesn't fire on "adiós".
+const matchesTerm = (lower, term) => {
+  if (term.includes(' ') || term.includes('-')) return lower.includes(term)
+  // Unicode-aware boundary: the term must not be flanked by other letters.
+  const re = new RegExp(`(?<![\\p{L}])${escapeRegex(term)}(?![\\p{L}])`, 'u')
+  return re.test(lower)
+}
+
+const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
 export const analyzeReview = (text) => {
   if (!text) return { score: 0, label: 'neutral', aspects: [] }
 
@@ -77,10 +89,10 @@ export const analyzeReview = (text) => {
   const foundNegative = []
 
   POSITIVE_WORDS.forEach(w => {
-    if (lower.includes(w)) { positiveCount++; foundPositive.push(w) }
+    if (matchesTerm(lower, w)) { positiveCount++; foundPositive.push(w) }
   })
   NEGATIVE_WORDS.forEach(w => {
-    if (lower.includes(w)) { negativeCount++; foundNegative.push(w) }
+    if (matchesTerm(lower, w)) { negativeCount++; foundNegative.push(w) }
   })
 
   // Negation detection (reverses next word)
@@ -88,8 +100,8 @@ export const analyzeReview = (text) => {
   words.forEach((word, i) => {
     if (negations.includes(word) && i < words.length - 1) {
       const next = words[i + 1]
-      if (POSITIVE_WORDS.some(p => next.includes(p))) { positiveCount--; negativeCount++ }
-      if (NEGATIVE_WORDS.some(n => next.includes(n))) { negativeCount--; positiveCount++ }
+      if (POSITIVE_WORDS.some(p => matchesTerm(next, p))) { positiveCount--; negativeCount++ }
+      if (NEGATIVE_WORDS.some(n => matchesTerm(next, n))) { negativeCount--; positiveCount++ }
     }
   })
 

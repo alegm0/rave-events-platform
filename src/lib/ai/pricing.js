@@ -168,13 +168,17 @@ export const forecastDemand = (event, tickets = []) => {
   // Confidence based on data points
   const confidence = Math.min(90, Math.max(20, values.length * 10))
 
-  // Daily forecast
+  // Daily forecast — deterministic so the chart is stable across reloads
+  // (important for a reproducible demo). We model a gentle slow-down in daily
+  // sales as the event approaches (demand tapers once the keen buyers are in),
+  // using a fixed decay factor instead of random noise.
   const forecast = []
   let cumulative = tickets.length
-  for (let i = 1; i <= Math.min(daysUntilEvent, 30); i++) {
-    // Add some variation to trend
-    const variation = trend * (0.8 + Math.random() * 0.4)
-    cumulative = Math.min(cap, cumulative + variation)
+  const horizon = Math.min(daysUntilEvent, 30)
+  for (let i = 1; i <= horizon; i++) {
+    // Smooth taper: ~100% of trend early, easing down toward ~70% near the date.
+    const decay = 1 - 0.3 * (i / Math.max(horizon, 1))
+    cumulative = Math.min(cap, cumulative + trend * decay)
     const date = new Date(now.getTime() + i * 24 * 60 * 60 * 1000)
     forecast.push({
       date: date.toISOString().split('T')[0],
@@ -192,8 +196,13 @@ export const forecastDemand = (event, tickets = []) => {
     confidence,
     forecast,
     willSellOut: projectedTotal >= cap * 0.95,
-    estimatedSellOutDate: trend > 0
-      ? new Date(now.getTime() + ((cap - tickets.length) / trend) * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-      : null,
+    estimatedSellOutDate: (() => {
+      if (trend <= 0) return null
+      const raw = new Date(now.getTime() + ((cap - tickets.length) / trend) * 24 * 60 * 60 * 1000)
+      // A sold-out date after the event itself is nonsensical — cap it at the
+      // event date (if it won't sell out before then, it effectively never does).
+      if (raw > eventDate) return null
+      return raw.toISOString().split('T')[0]
+    })(),
   }
 }

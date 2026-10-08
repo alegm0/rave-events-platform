@@ -128,16 +128,21 @@
 .prof-artist-chip {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.4rem 0.5rem 0.4rem 0.7rem;
+  gap: 0.5rem;
+  padding: 0.3rem 0.5rem 0.3rem 0.3rem;
   background: rgba(255, 61, 0, 0.1);
   border: 1px solid rgba(255, 61, 0, 0.25);
   color: #fff;
   font-size: 0.82rem;
   font-weight: 600;
-  border-radius: 2px;
+  border-radius: 999px;
 }
-.prof-artist-chip svg { color: #ff3d00; }
+.prof-artist-ava {
+  width: 26px; height: 26px; border-radius: 50%; overflow: hidden; flex-shrink: 0;
+  background: rgba(255, 61, 0, 0.2); display: flex; align-items: center; justify-content: center;
+}
+.prof-artist-ava img { width: 100%; height: 100%; object-fit: cover; }
+.prof-artist-ava svg { color: #ff3d00; width: 13px; height: 13px; }
 .prof-artist-remove {
   display: inline-flex;
   align-items: center;
@@ -159,3 +164,24 @@
   line-height: 1.5;
   margin-bottom: 0.5rem;
 }
+
+/* Section title with an inline action link (e.g. "Explorar artistas") */
+.prof-section-title--link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.prof-section-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #ff6b3d;
+  text-decoration: none;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.prof-section-action:hover { color: #ff3d00; }
+.prof-section-action svg { width: 13px; height: 13px; }

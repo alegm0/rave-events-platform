@@ -28,11 +28,20 @@ const Dashboard = () => {
         enriched.push({ ...e, tickets: t.length, revenue, pct: e.capacity ? Math.round((t.length / e.capacity) * 100) : 0 })
       }
       setEventsWithTickets(enriched)
+      // "Upcoming" = not yet finished (start + duration still in the future),
+      // consistent with hasEnded() used elsewhere — not just a date comparison.
+      const notEnded = (e) => {
+        if (!e?.date) return false
+        const [h, m] = (e.time || '23:00').split(':').map((n) => parseInt(n, 10) || 0)
+        const start = new Date(`${e.date}T00:00:00`)
+        start.setHours(h, m, 0, 0)
+        return new Date(start.getTime() + (e.duration || 6) * 3600000) >= new Date()
+      }
       setStats({
         totalEvents: evts.length,
         totalRevenue: rev,
         totalTickets: tix,
-        upcoming: evts.filter(e => new Date(e.date) > new Date()).length
+        upcoming: evts.filter(notEnded).length
       })
     }
     load()

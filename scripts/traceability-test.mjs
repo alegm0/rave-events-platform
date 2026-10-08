@@ -135,7 +135,7 @@ const run = async () => {
   await db.collection('users').doc(orgId).set({ id: orgId, email: `${orgId}@t.com`, displayName: 'Org Traza', role: 'organizer', brand: { name: 'Colectivo Traza', bio: 'test', city: 'Brisbane' }, ttest: true })
   await db.collection('users').doc(raverId).set({
     id: raverId, email: `${raverId}@t.com`, displayName: 'Raver Traza', role: 'user',
-    comfortProfile: { stepFree: true, accessibleToilets: true, quieterAreas: true, restAreas: true, simpleNavigation: true, minimalText: true },
+    comfortProfile: { stepFree: true, accessibleToilets: true, quieterAreas: true, restAreas: true, minimalText: true },
     ttest: true,
   })
 
@@ -200,12 +200,17 @@ const run = async () => {
     hl.serviceIds.has('gate-acc') && hl.serviceIds.has('wc-acc') && hl.serviceIds.has('rest1') && hl.zoneIds.has('quiet1'))
   ok('El mapa NO resalta la entrada con escaleras para este raver', !hl.serviceIds.has('gate-norm'))
 
-  // ── GAP CHECK: dead comfort prefs ──
+  // ── GAP CHECK: every comfort preference must have a real effect somewhere ──
+  // Map prefs (PREF_TO_SERVICE) highlight the venue map; `minimalText` instead
+  // trims the Pre-Rave Brief. All current prefs are consumed, so there are no
+  // dead preferences. (`simpleNavigation` was removed from the product.)
   console.log('\n[E] Revisión de huecos conocidos (se reportan como advertencia)')
-  const consumed = Object.keys(PREF_TO_SERVICE)
-  const deadPrefs = ['simpleNavigation', 'minimalText'].filter(p => !consumed.includes(p))
-  if (deadPrefs.length) warn(`Preferencias que el raver puede activar pero ningún mapa usa: ${deadPrefs.join(', ')}`,
+  const consumed = [...Object.keys(PREF_TO_SERVICE), 'minimalText']
+  const allPrefs = ['stepFree', 'accessibleToilets', 'quieterAreas', 'restAreas', 'minimalText']
+  const deadPrefs = allPrefs.filter(p => !consumed.includes(p))
+  if (deadPrefs.length) warn(`Preferencias que el raver puede activar pero nada usa: ${deadPrefs.join(', ')}`,
     'considerar implementarlas o quitarlas del perfil')
+  else ok('Todas las preferencias de comodidad tienen un efecto real (mapa o briefing)', true)
 
   // ── TRACE 4: purchase → going + notification + organizer visibility ──
   console.log('\n[F] Trazabilidad de compra: raver compra → organizador y raver lo ven')

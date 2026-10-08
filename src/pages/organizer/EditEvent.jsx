@@ -32,6 +32,8 @@ const IMAGES = [
   'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800&q=80',
 ]
 
+const today = new Date().toISOString().split('T')[0]
+
 const EditEvent = () => {
   const { id } = useParams()
   const { currentUser } = useAuth()
@@ -104,6 +106,7 @@ const EditEvent = () => {
     if (!form.title.trim()) e.title = 'El nombre es obligatorio'
     if (!form.genre) e.genre = 'Selecciona un género'
     if (!form.date) e.date = 'La fecha es obligatoria'
+    if (form.date && form.date < today) e.date = 'La fecha debe ser hoy o en el futuro'
     if (!form.location.trim()) e.location = 'El venue es obligatorio'
     if (!form.city.trim()) e.city = 'La ciudad es obligatoria'
     setErrors(e)
@@ -126,9 +129,21 @@ const EditEvent = () => {
         location: form.location.trim(),
         address: form.address.trim(),
         city: form.city.trim(),
-        price: form.pricingMode === 'single' ? (parseFloat(form.price) || 0) : parseFloat(form.tiers[0]?.price || 0),
+        price: (() => {
+          if (form.pricingMode === 'single') return parseFloat(form.price) || 0
+          // Headline price = lowest *paid* phase (so a $0 early phase doesn't make
+          // the whole event read as free). Fall back to the first phase's price.
+          const prices = form.tiers.map(t => parseFloat(t.price)).filter(p => !isNaN(p))
+          const paid = prices.filter(p => p > 0)
+          if (paid.length) return Math.min(...paid)
+          return prices.length ? Math.min(...prices) : 0
+        })(),
         pricingMode: form.pricingMode,
-        tiers: form.pricingMode === 'tiers' ? form.tiers.filter(t => t.name && t.price) : [],
+        // Keep every named phase that has a quantity, even if its price is 0
+        // (free early tickets are a valid phase). Mirrors CreateEvent.
+        tiers: form.pricingMode === 'tiers'
+          ? form.tiers.filter(t => t.name && t.qty && !isNaN(parseFloat(t.price)))
+          : [],
         capacity: parseInt(form.capacity) || 200,
         genre: form.genre,
         imageUrl: finalImageUrl,
@@ -228,7 +243,7 @@ const EditEvent = () => {
               <div className="ce-row">
                 <div className="ce-field">
                   <label><FiCalendar /> Fecha *</label>
-                  <input type="date" value={form.date} onChange={e => set('date', e.target.value)} className={errors.date ? 'error' : ''} />
+                  <input type="date" value={form.date} min={today} onChange={e => set('date', e.target.value)} className={errors.date ? 'error' : ''} />
                   {errors.date && <span className="ce-error">{errors.date}</span>}
                 </div>
                 <div className="ce-field">
@@ -263,16 +278,43 @@ const EditEvent = () => {
             {/* Tickets */}
             <div className="ce-step" style={{ marginTop: '2rem' }}>
               <h2 className="ce-step-title">Tickets</h2>
-              <div className="ce-row">
-                <div className="ce-field">
-                  <label><FiUsers /> Capacidad</label>
-                  <input type="number" value={form.capacity} min="10" onChange={e => set('capacity', e.target.value)} />
-                </div>
-                <div className="ce-field">
-                  <label><FiDollarSign /> Precio (AUD)</label>
-                  <input type="number" value={form.price} min="0" onChange={e => set('price', e.target.value)} />
+              <div className="ce-field">
+                <label><FiUsers /> Capacidad</label>
+                <input type="number" value={form.capacity} min="10" onChange={e => set('capacity', e.target.value)} />
+              </div>
+
+              <div className="ce-field">
+                <label><FiDollarSign /> Tipo de precio</label>
+                <div className="ce-lineup-modes">
+                  <button type="button" className={`ce-lineup-mode ${form.pricingMode === 'single' ? 'active' : ''}`} onClick={() => set('pricingMode', 'single')}>Precio único</button>
+                  <button type="button" className={`ce-lineup-mode ${form.pricingMode === 'tiers' ? 'active' : ''}`} onClick={() => set('pricingMode', 'tiers')}>Por fases</button>
                 </div>
               </div>
+
+              {form.pricingMode === 'single' ? (
+                <div className="ce-field">
+                  <label>Precio (AUD)</label>
+                  <input type="number" value={form.price} min="0" step="1" onChange={e => set('price', e.target.value)} />
+                  <span className="ce-hint">{parseFloat(form.price) === 0 ? 'Evento gratuito' : `AUD $${parseFloat(form.price || 0)} por ticket`}</span>
+                </div>
+              ) : (
+                <div className="ce-field">
+                  <label>Fases de precio</label>
+                  <div className="ce-tiers">
+                    {form.tiers.map((tier, i) => (
+                      <div key={i} className="ce-tier-row">
+                        <input type="text" value={tier.name} placeholder="Ej: Early Bird" onChange={e => { const t = [...form.tiers]; t[i] = { ...t[i], name: e.target.value }; set('tiers', t) }} className="ce-tier-name" />
+                        <div className="ce-tier-price-wrap"><span className="ce-tier-dollar">$</span><input type="number" value={tier.price} placeholder="0" min="0" onChange={e => { const t = [...form.tiers]; t[i] = { ...t[i], price: e.target.value }; set('tiers', t) }} className="ce-tier-price" /></div>
+                        <input type="number" value={tier.qty} placeholder="Cant." min="1" onChange={e => { const t = [...form.tiers]; t[i] = { ...t[i], qty: e.target.value }; set('tiers', t) }} className="ce-tier-qty" />
+                        {form.tiers.length > 1 && <button type="button" className="ce-lineup-remove" onClick={() => set('tiers', form.tiers.filter((_, j) => j !== i))}>x</button>}
+                      </div>
+                    ))}
+                    <button type="button" className="ce-lineup-add" onClick={() => set('tiers', [...form.tiers, { name: '', price: '', qty: '' }])}>+ Agregar fase</button>
+                  </div>
+                  <span className="ce-hint">Cuando se agotan los tickets de una fase, se activa la siguiente.</span>
+                </div>
+              )}
+
               <div className="ce-field">
                 <label>Edad mínima</label>
                 <div className="ce-age-options">

@@ -40,6 +40,8 @@
   letter-spacing: 0.12em; margin-bottom: 0.75rem;
 }
 .td-event-name { font-size: 1.5rem; font-weight: 800; color: #fff; letter-spacing: 0.05em; margin-bottom: 1.25rem; }
+.td-event-name-link { text-decoration: none; display: inline-block; transition: color 0.15s ease; }
+.td-event-name-link:hover .td-event-name { color: #ff6a3d; }
 .td-event-meta { display: flex; flex-direction: column; gap: 0.75rem; }
 .td-meta-item { display: flex; gap: 0.75rem; align-items: flex-start; }
 .td-meta-item svg { color: #ff3d00; margin-top: 0.2rem; flex-shrink: 0; }
@@ -148,3 +150,35 @@
 .td-ravemode-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 26px rgba(255, 61, 0, 0.45); }
 .td-ravemode-btn svg { margin-right: 0.4rem; vertical-align: middle; }
 .td-ravemode-btn span { font-size: 0.72rem; font-weight: 500; opacity: 0.9; letter-spacing: 0; }
+
+
+/* Banner "ya se usó" sobre el QR */
+.td-used-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.85rem 1rem;
+  margin-bottom: 1.25rem;
+  background: rgba(255, 255, 255, 0.06);
+  border-left: 3px solid #4caf50;
+}
+.td-used-banner svg {
+  color: #4caf50;
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}
+.td-used-banner strong {
+  display: block;
+  color: #fff;
+  font-size: 0.95rem;
+}
+.td-used-banner span {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.8rem;
+}
+/* QR atenuado cuando el ticket ya fue usado (ya no sirve para entrar). */
+.td-qr-wrap--used {
+  opacity: 0.4;
+  filter: grayscale(1);
+}

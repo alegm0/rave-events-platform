@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { getTicket, getEvent, getUser, cancelTicket } from '../lib/db'
 import { isEventLive } from '../lib/timetable'
 import { QRCodeSVG } from 'qrcode.react'
-import { FiCalendar, FiMapPin, FiClock, FiArrowLeft, FiUser, FiMusic, FiTrash2, FiRadio } from 'react-icons/fi'
+import { FiCalendar, FiMapPin, FiClock, FiArrowLeft, FiUser, FiMusic, FiTrash2, FiRadio, FiCheckCircle } from 'react-icons/fi'
 import Button from '../components/ui/Button'
 import Modal from '../components/ui/Modal'
 import { useToast } from '../components/ui/Toast'
@@ -39,6 +39,8 @@ const TicketDetail = () => {
     } else {
       const msg = result === 'used' ? 'No se puede cancelar un ticket ya validado en la puerta'
         : result === 'ended' ? 'No se puede cancelar: el evento ya finalizó'
+        : result === 'in-progress' ? 'No se puede cancelar: el evento está en curso'
+        : result === 'too-late' ? 'Las cancelaciones cierran 48 horas antes del evento'
         : 'No se pudo cancelar el ticket'
       toast.error(msg)
       setShowCancel(false)
@@ -61,6 +63,19 @@ const TicketDetail = () => {
   // Status shown to the user: 'used' (scanned), 'ended' (event is over), or 'valid'.
   const displayStatus = ticket.status === 'used' ? 'used' : eventEnded ? 'ended' : 'valid'
   const statusLabel = displayStatus === 'used' ? '✓ Usado' : displayStatus === 'ended' ? '✓ Finalizado' : '● Válido'
+
+  // Cancellation closes 48 h before the start (and of course once it starts).
+  // Mirrors the rule enforced in db.cancelTicket so the UI never offers an
+  // action the data layer will reject.
+  const CANCEL_LOCK_HOURS = 48
+  const hoursToStart = (() => {
+    if (!event?.date) return null
+    const [h, m] = (event.time || '23:00').split(':').map((n) => parseInt(n, 10) || 0)
+    const start = new Date(`${event.date}T00:00:00`)
+    start.setHours(h, m, 0, 0)
+    return (start.getTime() - Date.now()) / 3600000
+  })()
+  const canCancel = ticket.status === 'valid' && !eventEnded && hoursToStart !== null && hoursToStart > CANCEL_LOCK_HOURS
 
   return (
     <div className="td-page">
@@ -88,7 +103,14 @@ const TicketDetail = () => {
 
               <div className="td-card-info">
                 {event?.genre && <span className="td-genre">{event.genre}</span>}
-                <h1 className="td-event-name">{event?.title || 'Evento'}</h1>
+                {/* Tappable event name → opens the full event page. */}
+                {event?.id ? (
+                  <Link to={`/event/${event.id}`} className="td-event-name-link" title="Ver el evento">
+                    <h1 className="td-event-name">{event.title || 'Evento'}</h1>
+                  </Link>
+                ) : (
+                  <h1 className="td-event-name">{event?.title || 'Evento'}</h1>
+                )}
                 <div className="td-event-meta">
                   <div className="td-meta-item">
                     <FiCalendar />
@@ -117,7 +139,21 @@ const TicketDetail = () => {
 
             {/* QR Section */}
             <div className="td-qr-section">
-              <div className="td-qr-wrap">
+              {/* Clear banner when the ticket was already scanned at the door. */}
+              {displayStatus === 'used' && (
+                <div className="td-used-banner">
+                  <FiCheckCircle />
+                  <div>
+                    <strong>Este ticket ya se usó</strong>
+                    <span>
+                      {ticket.usedAt
+                        ? `Validado el ${new Date(ticket.usedAt).toLocaleString('es', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}`
+                        : 'Entrada ya validada en la puerta'}
+                    </span>
+                  </div>
+                </div>
+              )}
+              <div className={`td-qr-wrap ${displayStatus === 'used' ? 'td-qr-wrap--used' : ''}`}>
                 <QRCodeSVG id="qr-code" value={ticket.qrCode} size={220} bgColor="#ffffff" fgColor="#0d0d0d" level="H"
                   imageSettings={{ src: '', width: 0, height: 0 }} />
               </div>
@@ -212,16 +248,26 @@ const TicketDetail = () => {
               </ul>
             </div>
 
-            {/* Cancel ticket — only for valid tickets to events that haven't happened yet */}
-            {ticket.status === 'valid' && !eventEnded && (
+            {/* Cancel ticket — only while valid AND more than 48 h before start */}
+            {canCancel && (
               <div className="td-sidebar-card">
                 <h3><FiTrash2 /> Cancelar ticket</h3>
                 <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.8rem', marginBottom: '1rem', lineHeight: 1.5 }}>
-                  Si no puedes asistir, puedes cancelar tu ticket.
+                  Si no puedes asistir, puedes cancelar tu ticket hasta 48 horas antes del evento.
                 </p>
                 <Button variant="ghost" fullWidth onClick={() => setShowCancel(true)} className="btn-danger-ghost">
                   Cancelar Ticket
                 </Button>
+              </div>
+            )}
+
+            {/* Valid, future ticket but inside the 48 h lock → explain why it can't be cancelled */}
+            {ticket.status === 'valid' && !eventEnded && !canCancel && (
+              <div className="td-sidebar-card">
+                <h3><FiTrash2 /> Cancelar ticket</h3>
+                <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.8rem', lineHeight: 1.5 }}>
+                  Las cancelaciones cierran 48 horas antes del evento. Ya no es posible cancelar esta entrada.
+                </p>
               </div>
             )}
           </div>

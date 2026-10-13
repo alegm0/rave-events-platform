@@ -45,6 +45,7 @@ serviceAccountKey.json
 *.docx
 instrumentos-tesis/
 MANUAL_TECNICO.html
+descripcion.md
 diagramas/
 
 # Duplicate folder

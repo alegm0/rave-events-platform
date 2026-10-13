@@ -11,9 +11,9 @@
   --dark: #0d0d0d;
   --dark-light: #111111;
   --dark-lighter: #1a1a1a;
-  --text: #e0e0e0;
-  --text-muted: #999999;
-  --text-dim: #666666;
+  --text: #e0e0e0;        /* ~13:1 sobre #0d0d0d — AAA */
+  --text-muted: #999999;  /* ~7:1 — AA */
+  --text-dim: #8a8a8a;    /* subido de #666 (3.6:1) a 5.1:1 para pasar AA en texto normal */
   --success: #4caf50;
   --danger: #ff3d00;
   --warning: #ff9800;
@@ -222,4 +222,29 @@ input[type="time"]::-webkit-calendar-picker-indicator {
 }
 .spin {
   animation: spin 1s linear infinite;
+}
+
+
+/* ── Accesibilidad (WCAG 2.1 AA) ────────────────────────────────────────── */
+
+/* 2.4.7 Foco visible: un anillo claro cuando se navega con teclado (Tab), sin
+   molestar al puntero (usamos :focus-visible, no :focus). */
+:focus-visible {
+  outline: 2px solid #ff6a3d;
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* 2.3.3 / 2.2.2 Respeta a quien pide menos movimiento: desactiva animaciones y
+   transiciones para usuarios con prefers-reduced-motion. La app sigue 100%
+   usable, solo sin movimiento. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }

@@ -38,6 +38,9 @@ function AppShell() {
   const { pathname } = useLocation()
   // Rave Mode is a full-screen, chrome-less experience by design
   const bareLayout = pathname.startsWith('/rave-mode')
+  // Operational screens (door scanner, live ops) keep the navbar for navigation
+  // but hide the marketing footer — they are focused tools used during an event.
+  const operationalView = pathname.startsWith('/organizer/scanner') || pathname.includes('/live')
 
   return (
     <div className="app">
@@ -97,7 +100,7 @@ function AppShell() {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
-      {!bareLayout && <Footer />}
+      {!bareLayout && !operationalView && <Footer />}
     </div>
   )
 }

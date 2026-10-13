@@ -129,3 +129,55 @@
 
 /* Header nav: dashboard + live ops */
 .scanner-nav { display: flex; flex-direction: column; gap: 0.4rem; }
+
+
+/* Últimos validados — lista persistente de check-ins */
+.scanner-recent-empty {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+.scanner-recent-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.scanner-recent-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.6rem;
+  background: rgba(76, 175, 80, 0.08);
+  border-left: 2px solid #4caf50;
+}
+.scanner-recent-icon {
+  color: #4caf50;
+  flex-shrink: 0;
+}
+.scanner-recent-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+.scanner-recent-name {
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.scanner-recent-code {
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 0.65rem;
+  font-family: monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.scanner-recent-time {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.75rem;
+  flex-shrink: 0;
+}

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { validateTicket, getEvent, getTicketsByEvent } from '../../lib/db'
+import { validateTicket, getEvent, getTicketsByEvent, getUser } from '../../lib/db'
 import { useAuth } from '../../context/AuthContext'
 import { FiCheckCircle, FiXCircle, FiCamera, FiType, FiUsers, FiArrowLeft, FiActivity, FiClock } from 'react-icons/fi'
 import Button from '../../components/ui/Button'
@@ -19,6 +19,7 @@ const QRScanner = () => {
   const [scanCount, setScanCount] = useState(0)
   const [event, setEvent] = useState(null)
   const [stats, setStats] = useState({ total: 0, checkedIn: 0 })
+  const [recent, setRecent] = useState([]) // last check-ins: {id, name, code, usedAt}
   const [cameraError, setCameraError] = useState(null)
   const videoRef = useRef(null)
   const streamRef = useRef(null)
@@ -53,11 +54,22 @@ const QRScanner = () => {
   }, [mode])
 
   const refreshStats = async () => {
-    const tickets = await getTicketsByEvent(eventId)
+    const tickets = await getTicketsByEvent(eventId, { fresh: true })
+    const used = tickets.filter(t => t.status === 'used')
     setStats({
       total: tickets.length,
-      checkedIn: tickets.filter(t => t.status === 'used').length,
+      checkedIn: used.length,
     })
+    // Keep a short, persistent list of the latest check-ins (name + time), so the
+    // door staff sees WHO has entered even after the result overlay disappears.
+    const latest = [...used]
+      .sort((a, b) => new Date(b.usedAt || 0) - new Date(a.usedAt || 0))
+      .slice(0, 8)
+    const named = await Promise.all(latest.map(async (t) => {
+      const u = await getUser(t.userId)
+      return { id: t.id, name: u?.displayName || 'Asistente', code: t.qrCode, usedAt: t.usedAt }
+    }))
+    setRecent(named)
   }
 
   const startCamera = async () => {
@@ -368,6 +380,29 @@ const QRScanner = () => {
                     style={{ width: `${event?.capacity ? Math.min((stats.checkedIn / event.capacity) * 100, 100) : 0}%` }}></div>
                 </div>
               </div>
+            </div>
+
+            {/* Persistent list of who has been validated (survives the overlay). */}
+            <div className="scanner-info-card">
+              <h3>Últimos validados</h3>
+              {recent.length === 0 ? (
+                <p className="scanner-recent-empty">Aún no hay check-ins. Los asistentes validados aparecerán aquí.</p>
+              ) : (
+                <ul className="scanner-recent-list">
+                  {recent.map(r => (
+                    <li key={r.id} className="scanner-recent-item">
+                      <FiCheckCircle className="scanner-recent-icon" />
+                      <div className="scanner-recent-info">
+                        <span className="scanner-recent-name">{r.name}</span>
+                        <span className="scanner-recent-code">{r.code}</span>
+                      </div>
+                      <span className="scanner-recent-time">
+                        {r.usedAt ? new Date(r.usedAt).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' }) : '—'}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           </div>
         </div>

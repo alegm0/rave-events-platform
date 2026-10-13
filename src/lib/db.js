@@ -349,19 +349,31 @@ export const getTicket = async (id) => {
 // Returns true on success, or a reason string on refusal, so the UI can show a
 // precise message. A ticket can't be cancelled if it was already used (scanned)
 // or if its event has already finished (there's nothing left to cancel).
+// Cancellation window: a ticket can only be cancelled while it is unused AND the
+// event is far enough away. We block cancellation from 48 h before the start
+// onwards (which also covers an event that is in progress or already finished),
+// so the organizer isn't left with phantom cancellations right before doors.
+export const CANCELLATION_LOCK_HOURS = 48
+
 export const cancelTicket = async (ticketId) => {
   const ticket = await getDocument('tickets', ticketId)
   if (!ticket) return 'not-found'
   if (ticket.status === 'used') return 'used'
 
   const event = await getEvent(ticket.eventId)
-  // Block cancelling a ticket for an event that has already ended.
   if (event?.date) {
     const [h, m] = (event.time || '23:00').split(':').map((n) => parseInt(n, 10) || 0)
     const start = new Date(`${event.date}T00:00:00`)
     start.setHours(h, m, 0, 0)
+    const now = new Date()
     const end = new Date(start.getTime() + (event.duration || 6) * 3600000)
-    if (end < new Date()) return 'ended'
+    // Already finished.
+    if (end < now) return 'ended'
+    // In progress (started but not finished).
+    if (start <= now) return 'in-progress'
+    // Within the 48 h lock before the start.
+    const lockOpensAt = new Date(start.getTime() - CANCELLATION_LOCK_HOURS * 3600000)
+    if (now >= lockOpensAt) return 'too-late'
   }
 
   await deleteDoc(doc(db, 'tickets', ticketId))
@@ -377,6 +389,17 @@ export const cancelTicket = async (ticketId) => {
     }
     await updateDoc(doc(db, 'events', ticket.eventId), counters)
   }
+
+  // Notify the user that the cancellation went through (RF18 — same channel as
+  // purchases, subscriptions and reminders).
+  await addNotification(ticket.userId, {
+    type: 'cancellation',
+    title: `Ticket cancelado: ${event?.title || 'evento'}`,
+    message: `Cancelaste tu entrada para ${event?.title || 'el evento'}. El cupo quedó liberado.`,
+    eventId: ticket.eventId,
+    image: event?.imageUrl || null,
+  })
+
   invalidateCache('tickets')
   invalidateCache('events')
   return true

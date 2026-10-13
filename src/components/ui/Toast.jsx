@@ -26,10 +26,13 @@ export const ToastProvider = ({ children }) => {
   return (
     <ToastContext.Provider value={toast}>
       {children}
-      <div className="toast-container">
+      {/* WCAG 4.1.3: status messages announced to assistive tech. Errors are
+          assertive (interrupt), the rest polite. Icons are decorative. */}
+      <div className="toast-container" aria-live="polite" aria-atomic="true">
         {toasts.map(t => (
-          <div key={t.id} className={`toast toast--${t.type}`}>
-            <span className="toast-icon">{icons[t.type]}</span>
+          <div key={t.id} className={`toast toast--${t.type}`}
+            role={t.type === 'error' ? 'alert' : 'status'}>
+            <span className="toast-icon" aria-hidden="true">{icons[t.type]}</span>
             <span className="toast-msg">{t.message}</span>
           </div>
         ))}

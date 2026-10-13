@@ -157,7 +157,7 @@ const Artists = () => {
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Busca cualquier artista (ej: Nina Kraviz)…"
           />
-          {query && <button className="art-search-clear" onClick={() => setQuery('')}><FiX /></button>}
+          {query && <button className="art-search-clear" onClick={() => setQuery('')} aria-label="Limpiar búsqueda"><FiX /></button>}
         </div>
 
         {loading ? (
@@ -205,7 +205,7 @@ const Artists = () => {
       {selected && (
         <div className="art-modal-backdrop" onClick={() => { audioRef.current?.pause(); setPlayingId(null); setSelected(null) }}>
           <div className="art-modal" onClick={(e) => e.stopPropagation()}>
-            <button className="art-modal-close" onClick={() => { audioRef.current?.pause(); setPlayingId(null); setSelected(null) }}><FiX /></button>
+            <button className="art-modal-close" onClick={() => { audioRef.current?.pause(); setPlayingId(null); setSelected(null) }} aria-label="Cerrar"><FiX /></button>
             <div className="art-modal-head">
               <div className="art-avatar art-avatar--lg">{selected.image ? <img src={selected.image} alt="" /> : <span>{selected.name[0]}</span>}</div>
               <div>

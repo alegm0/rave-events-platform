@@ -38,7 +38,7 @@ const SearchModal = ({ isOpen, onClose }) => {
           <input ref={inputRef} type="text" value={query} onChange={e => setQuery(e.target.value)}
             placeholder="Buscar eventos, artistas, venues, organizadores..."
             className="search-modal-input" autoComplete="off" />
-          <button className="search-close" onClick={onClose}><FiX /></button>
+          <button className="search-close" onClick={onClose} aria-label="Cerrar búsqueda"><FiX /></button>
         </div>
 
         {query.length >= 2 && (
